@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { api } from '../api'
 
 interface UsuariosSecaoProps {
@@ -37,6 +37,13 @@ export default function UsuariosSecao({
     permissoes: [],
   })
   const [userEditando, setUserEditando] = useState<string | null>(null)
+  const [viewportWidth, setViewportWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024)
+  useEffect(() => {
+    const handleResize = () => setViewportWidth(window.innerWidth)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+  const isTablet = viewportWidth >= 600 && viewportWidth < 980
 
   const alternar = (lista: string[], v: string) =>
     lista.includes(v) ? lista.filter((x) => x !== v) : [...lista, v]
@@ -97,7 +104,7 @@ export default function UsuariosSecao({
         <b>recursos extras</b> além do perfil. Sem cidade vinculada = todas.
       </p>
       <div className="table-scroll">
-        <table>
+        <table className={isTablet ? 'table-card' : ''}>
           <thead>
             <tr>
               <th>Login</th>
@@ -111,16 +118,14 @@ export default function UsuariosSecao({
           <tbody>
             {usersLista.map((u: any) => (
               <tr key={u.login}>
-                <td>
-                  <b>{u.login}</b>
-                </td>
-                <td>{u.nome}</td>
-                <td>{u.perfil}</td>
-                <td style={{ fontSize: '.7rem' }}>
+                <td data-label="Login"><b>{u.login}</b></td>
+                <td data-label="Nome">{u.nome}</td>
+                <td data-label="Perfil">{u.perfil}</td>
+                <td data-label="Cidades" style={{ fontSize: '.7rem' }}>
                   {u.cidades.length ? u.cidades.join(', ') : 'todas'}
                 </td>
-                <td style={{ fontSize: '.7rem' }}>{u.efetivas.join(', ')}</td>
-                <td className="row-actions">
+                <td data-label="Recursos" style={{ fontSize: '.7rem' }}>{u.efetivas.join(', ')}</td>
+                <td className="row-actions" data-label="Ações">
                   <button
                     onClick={() => {
                       setUserEditando(u.login)

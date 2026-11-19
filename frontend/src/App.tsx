@@ -109,6 +109,7 @@ export default function App() {
   const [q, setQ] = useState('');
   const [stFilter, setStFilter] = useState('');
   const [importMsg, setImportMsg] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // Seleção múltipla da planilha (exclusão em lote)
   const [selecionadas, setSelecionadas] = useState<string[]>([]);
   const alternarSelecao = (id: string) =>
@@ -410,6 +411,16 @@ export default function App() {
     r.sort((a, b) => String((a as any)[sortK]).localeCompare(String((b as any)[sortK])) * sortD);
     return r;
   }, [rows, q, stFilter, sortK, sortD]);
+  const [viewportWidth, setViewportWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
+  useEffect(() => {
+    const handleResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = viewportWidth < 600;
+  const isTablet = viewportWidth >= 600 && viewportWidth < 980;
+
   const ganttBlocos = (camps: any[]) => {
     const clsPorStatus: Record<string, string> = {
       veiculando: 'veic',
@@ -423,7 +434,7 @@ export default function App() {
       reservada: 'RESERVADA',
       vencida: 'ENCERRADA',
     };
-    const blocos: { cls: string; label: string; w: number; title?: string }[] = camps.map(
+    const blocos: { cls: string; label: string; w: number; title?: string; showLabel: boolean }[] = camps.map(
       (c: any) => {
         const cls = clsPorStatus[c.status] || 'veic';
         const pre = rotuloStatus[c.status] ? `${rotuloStatus[c.status]} · ` : '';
@@ -432,16 +443,17 @@ export default function App() {
           label: `${pre}${String(c.anunciante).toUpperCase()}`,
           w: 0,
           title: `${c.anunciante} · ${br(c.inicio)} → ${br(c.fim)} · ${STATUS_ROTULO[c.status] || c.status}`,
+          showLabel: !isMobile,
         };
       },
     );
-    if (!blocos.length) return [{ cls: 'livre', label: 'LIVRE', w: 96 }];
+    if (!blocos.length) return [{ cls: 'livre', label: 'LIVRE', w: 96, showLabel: !isMobile }];
     const w = Math.min(40, Math.max(10, Math.floor(88 / blocos.length)));
     blocos.forEach((b) => {
       b.w = w;
     });
     const usado = w * blocos.length;
-    if (usado < 90) blocos.push({ cls: 'livre', label: 'LIVRE', w: 96 - usado });
+    if (usado < 90) blocos.push({ cls: 'livre', label: 'LIVRE', w: 96 - usado, showLabel: !isMobile });
     return blocos;
   };
 
@@ -716,7 +728,7 @@ export default function App() {
   const conteudoReservas = () => (
     <>
       <div style={{ overflowX: 'auto' }}>
-        <table>
+        <table className={isTablet ? 'table-card' : ''}>
           <thead>
             <tr>
               <th>Anunciante</th>
@@ -730,14 +742,12 @@ export default function App() {
           <tbody>
             {resListaG.map((r: any) => (
               <tr key={r.id}>
-                <td>
-                  <b>{r.anunciante}</b>
-                </td>
-                <td>{r.led_codigo}</td>
-                <td>{r.cidade_nome}</td>
-                <td>{br(r.inicio)}</td>
-                <td>{br(r.fim)}</td>
-                <td className="row-actions">
+                <td data-label="Anunciante"><b>{r.anunciante}</b></td>
+                <td data-label="LED">{r.led_codigo}</td>
+                <td data-label="Cidade">{r.cidade_nome}</td>
+                <td data-label="Início">{br(r.inicio)}</td>
+                <td data-label="Fim">{br(r.fim)}</td>
+                <td className="row-actions" data-label="Ações">
                   <button onClick={() => abrirEdicaoReserva(r)}>Editar</button>
                   <button className="danger" onClick={() => excluirReservaGlobal(r.id)}>
                     Excluir
@@ -1055,94 +1065,144 @@ export default function App() {
 
       <div className="wrap">
         <div className="topbar">
-          <div className="brand">
-            {logo ? (
-              <img className="brand-logo" src={logo} alt="logo" />
-            ) : (
-              <div className="icon">📺</div>
+          <div className="topbar-main">
+            <div className="brand">
+              {logo ? (
+                <img className="brand-logo" src={logo} alt="logo" />
+              ) : (
+                <div className="icon">📺</div>
+              )}
+              <div>
+                <h1>CONTROLE DE LED</h1>
+                <span>PAINÉIS DE VEICULAÇÃO</span>
+              </div>
+            </div>
+            <span className="live">● LIVE{online ? '' : ' · OFFLINE'}</span>
+            <div className="kpis">
+              <div className="kpi">
+                <label>OCUPAÇÃO MÉDIA</label>
+                <b>{dash.kpis.ocupacao_media}%</b>
+              </div>
+              <div className="kpi">
+                <label>LEDS ATIVOS</label>
+                <b>{dash.kpis.leds_ativos}</b>
+              </div>
+              <div className="kpi">
+                <label>A VENCER (7D)</label>
+                <b style={{ color: 'var(--orange)' }}>{dash.kpis.a_vencer_7d}</b>
+              </div>
+              <div className="kpi">
+                <label>DISPONÍVEIS</label>
+                <b style={{ color: 'var(--teal)' }}>
+                  {dash.kpis.livres}
+                  <small>/{dash.kpis.espacos_total} espaços</small>
+                </b>
+              </div>
+            </div>
+          </div>
+          <div className="topbar-actions">
+            <div className="select">
+              🏙️ Cidade:{' '}
+              <select value={cidade} onChange={(e) => trocarCidade(e.target.value)}>
+                <option value="">Todas ({cidadesOpts.length})</option>
+                {cidadesOpts.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                  </option>
+                ))}
+              </select>{' '}
+              ▾
+            </div>
+            <div className="pill">📅 {dash.periodo}</div>
+            {can('leds') && (
+              <button
+                className="pill"
+                style={{ cursor: 'pointer' }}
+                onClick={() => {
+                  setLedsMenu(true);
+                  setLedMsg(null);
+                }}
+              >
+                <span style={{ marginRight: 6 }}>📺</span>Painéis de LED
+              </button>
             )}
-            <div>
-              <h1>CONTROLE DE LED</h1>
-              <span>PAINÉIS DE VEICULAÇÃO</span>
+            {can('reservas') && (
+              <button className="pill" style={{ cursor: 'pointer' }} onClick={abrirReservasMenu}>
+                <span style={{ marginRight: 6 }}>🗓️</span>Reservas
+              </button>
+            )}
+            {tela === 'painel' && temConfig && (
+              <button
+                className="pill"
+                style={{ cursor: 'pointer' }}
+                onClick={() => setTela('config')}
+              >
+                <span style={{ marginRight: 6 }}>⚙️</span>Configuração
+              </button>
+            )}
+            {tela === 'config' && (
+              <button
+                className="pill"
+                style={{ cursor: 'pointer' }}
+                onClick={() => setTela('painel')}
+              >
+                <span style={{ marginRight: 6 }}>←</span>Voltar
+              </button>
+            )}
+            {perfil && (
+              <div className="pill" title="Perfil do usuário (spec §9.2)">
+                <span style={{ marginRight: 6 }}>👤</span>
+                {perfil}
+                {isAdmin ? ' · admin' : ''}
+              </div>
+            )}
+            <button
+              className="topbar-menu-btn"
+              aria-label="Menu"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="topbar-menu"
+              onClick={() => setMobileMenuOpen(v => !v)}
+            >
+              ☰
+            </button>
+            <div className={`topbar-menu ${mobileMenuOpen ? 'open' : ''}`} id="topbar-menu" role="menu">
+              {can('leds') && (
+                <button
+                  className="pill"
+                  role="menuitem"
+                  onClick={() => { setLedsMenu(true); setLedMsg(null); }}
+                >
+                  <span style={{ marginRight: 6 }}>📺</span>Painéis de LED
+                </button>
+              )}
+              {can('reservas') && (
+                <button className="pill" role="menuitem" onClick={abrirReservasMenu}>
+                  <span style={{ marginRight: 6 }}>🗓️</span>Reservas
+                </button>
+              )}
+              {tela === 'painel' && temConfig && (
+                <button
+                  className="pill"
+                  role="menuitem"
+                  onClick={() => setTela('config')}
+                >
+                  <span style={{ marginRight: 6 }}>⚙️</span>Configuração
+                </button>
+              )}
+              {tela === 'config' && (
+                <button
+                  className="pill"
+                  role="menuitem"
+                  onClick={() => setTela('painel')}
+                >
+                  <span style={{ marginRight: 6 }}>←</span>Voltar
+                </button>
+              )}
+              <button className="btn-sair" role="menuitem" onClick={sair} style={{width:'100%',justifyContent:'flex-start'}}>
+                Sair
+              </button>
             </div>
           </div>
-          <span className="live">● LIVE{online ? '' : ' · OFFLINE'}</span>
-          <div className="kpis">
-            <div className="kpi">
-              <label>OCUPAÇÃO MÉDIA</label>
-              <b>{dash.kpis.ocupacao_media}%</b>
-            </div>
-            <div className="kpi">
-              <label>LEDS ATIVOS</label>
-              <b>{dash.kpis.leds_ativos}</b>
-            </div>
-            <div className="kpi">
-              <label>A VENCER (7D)</label>
-              <b style={{ color: 'var(--orange)' }}>{dash.kpis.a_vencer_7d}</b>
-            </div>
-            <div className="kpi">
-              <label>DISPONÍVEIS</label>
-              <b style={{ color: 'var(--teal)' }}>
-                {dash.kpis.livres}
-                <small>/{dash.kpis.espacos_total} espaços</small>
-              </b>
-            </div>
-          </div>
-          <div className="select">
-            🏙️ Cidade:{' '}
-            <select value={cidade} onChange={(e) => trocarCidade(e.target.value)}>
-              <option value="">Todas ({cidadesOpts.length})</option>
-              {cidadesOpts.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </select>{' '}
-            ▾
-          </div>
-          <div className="pill">📅 {dash.periodo}</div>
-          {can('leds') && (
-            <button
-              className="pill"
-              style={{ cursor: 'pointer' }}
-              onClick={() => {
-                setLedsMenu(true);
-                setLedMsg(null);
-              }}
-            >
-              <span style={{ marginRight: 6 }}>📺</span>Painéis de LED
-            </button>
-          )}
-          {can('reservas') && (
-            <button className="pill" style={{ cursor: 'pointer' }} onClick={abrirReservasMenu}>
-              <span style={{ marginRight: 6 }}>🗓️</span>Reservas
-            </button>
-          )}
-          {tela === 'painel' && temConfig && (
-            <button
-              className="pill"
-              style={{ cursor: 'pointer' }}
-              onClick={() => setTela('config')}
-            >
-              <span style={{ marginRight: 6 }}>⚙️</span>Configuração
-            </button>
-          )}
-          {tela === 'config' && (
-            <button
-              className="pill"
-              style={{ cursor: 'pointer' }}
-              onClick={() => setTela('painel')}
-            >
-              <span style={{ marginRight: 6 }}>←</span>Voltar
-            </button>
-          )}
-          {perfil && (
-            <div className="pill" title="Perfil do usuário (spec §9.2)">
-              <span style={{ marginRight: 6 }}>👤</span>
-              {perfil}
-              {isAdmin ? ' · admin' : ''}
-            </div>
-          )}
           <div style={{ position: 'relative' }}>
             {can('notificacoes') && (
               <button
@@ -1253,9 +1313,23 @@ export default function App() {
                             style={{ width: `${b.w}%` }}
                             title={b.title}
                           >
-                            {b.label}
+                            {b.showLabel && b.label}
                           </div>
                         ))}
+                        {isMobile && (
+                          <div className="track-labels" aria-hidden="true">
+                            {ganttBlocos(l.campanhas).map((b, i) => (
+                              <div
+                                key={i}
+                                className={`track-label ${b.cls}`}
+                                style={{ width: `${b.w}%` }}
+                                title={b.title}
+                              >
+                                {b.label}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -1384,7 +1458,7 @@ export default function App() {
                   (mesma base do topo).
                 </p>
                 <div style={{ overflowX: 'auto', maxHeight: 220, overflowY: 'auto' }}>
-                  <table>
+                  <table className={isTablet ? 'table-card' : ''}>
                     <thead>
                       <tr>
                         <th>Anunciante</th>
@@ -1395,9 +1469,9 @@ export default function App() {
                     <tbody>
                       {dash.a_vencer_lista.map((a, i) => (
                         <tr key={i}>
-                          <td>{a.anunciante}</td>
-                          <td>{a.led}</td>
-                          <td>
+                          <td data-label="Anunciante">{a.anunciante}</td>
+                          <td data-label="LED">{a.led}</td>
+                          <td data-label="Status">
                             <span className="status-dot" style={{ background: 'var(--orange)' }} />
                             {a.status}
                             {a.dias !== undefined && (
@@ -1424,7 +1498,7 @@ export default function App() {
                 </h2>
                 <p className="sub">Início próximo · início − hoje ≤ 7d.</p>
                 <div style={{ overflowX: 'auto', maxHeight: 220, overflowY: 'auto' }}>
-                  <table>
+                  <table className={isTablet ? 'table-card' : ''}>
                     <thead>
                       <tr>
                         <th>Anunciante</th>
@@ -1435,9 +1509,9 @@ export default function App() {
                     <tbody>
                       {(dash.a_iniciar_lista || []).map((a, i) => (
                         <tr key={i}>
-                          <td>{a.anunciante}</td>
-                          <td>{a.led}</td>
-                          <td>
+                          <td data-label="Anunciante">{a.anunciante}</td>
+                          <td data-label="LED">{a.led}</td>
+                          <td data-label="Status">
                             <span className="status-dot" style={{ background: 'var(--blue)' }} />
                             {a.status}
                             {a.dias !== undefined && (
@@ -1550,7 +1624,7 @@ export default function App() {
                   </div>
                   {importMsg && <p className={`spot-msg ${importMsg.tipo}`}>{importMsg.texto}</p>}
                   <div style={{ overflowX: 'auto' }}>
-                    <table>
+                    <table className={isTablet ? 'table-card' : ''}>
                       <thead>
                         <tr>
                           {podeEditar && (
@@ -1612,7 +1686,7 @@ export default function App() {
                                 className={r.id && r.id === destaque ? 'destaque' : undefined}
                               >
                                 {podeEditar && (
-                                  <td>
+                                  <td data-label="✓">
                                     <input
                                       type="checkbox"
                                       checked={!!r.id && selecionadas.includes(r.id)}
@@ -1621,9 +1695,9 @@ export default function App() {
                                     />
                                   </td>
                                 )}
-                                <td>{r.cidade}</td>
-                                <td>{r.led}</td>
-                                <td>
+                                <td data-label="Cidade">{r.cidade}</td>
+                                <td data-label="LED">{r.led}</td>
+                                <td data-label="Anunciante">
                                   {editInline &&
                                   editInline.id === r.id &&
                                   editInline.campo === 'anunciante' ? (
@@ -1654,9 +1728,9 @@ export default function App() {
                                     />
                                   )}
                                 </td>
-                                <td>{br(r.inicio)}</td>
-                                <td>{br(r.fim)}</td>
-                                <td>
+                                <td data-label="Início">{br(r.inicio)}</td>
+                                <td data-label="Fim">{br(r.fim)}</td>
+                                <td data-label="Status">
                                   <span
                                     className="status-dot"
                                     style={{ background: corStatus(r.status) }}
@@ -1671,7 +1745,7 @@ export default function App() {
                                     })()}
                                 </td>
                                 {podeEditar && (
-                                  <td className="row-actions">
+                                  <td className="row-actions" data-label="Ações">
                                     <button onClick={() => abrirEditarCampanha(r)}>Editar</button>
                                     <button onClick={() => abrirReservas(r)}>Reservas</button>
                                     <button className="danger" onClick={() => excluirCampanha(r)}>
@@ -1715,7 +1789,7 @@ export default function App() {
                       : `Demonstração offline · ${dash.periodo}`}
                   </p>
                   <div style={{ overflowX: 'auto', maxHeight: 440, overflowY: 'auto' }}>
-                    <table>
+                    <table className={isTablet ? 'table-card' : ''}>
                       <thead>
                         <tr>
                           <th>Cidade</th>
@@ -1729,16 +1803,17 @@ export default function App() {
                       <tbody>
                         {linhas.map((r, i) => (
                           <tr key={r.id || i}>
-                            <td>{r.cidade}</td>
-                            <td>{r.led}</td>
+                            <td data-label="Cidade">{r.cidade}</td>
+                            <td data-label="LED">{r.led}</td>
                             <td
+                              data-label="Anunciante"
                               style={r.status === 'livre' ? { color: 'var(--muted)' } : undefined}
                             >
                               {r.anunciante}
                             </td>
-                            <td>{br(r.inicio)}</td>
-                            <td>{br(r.fim)}</td>
-                            <td>
+                            <td data-label="Início">{br(r.inicio)}</td>
+                            <td data-label="Fim">{br(r.fim)}</td>
+                            <td data-label="Status">
                               <span
                                 className="status-dot"
                                 style={{ background: corStatus(r.status) }}
@@ -1827,7 +1902,7 @@ export default function App() {
                         <h2 style={{ fontSize: '.85rem', marginTop: 12 }}>
                           {g} ({itens.length})
                         </h2>
-                        <table>
+                        <table className={isTablet ? 'table-card' : ''}>
                           <thead>
                             <tr>
                               <th>Cidade</th>
@@ -1841,12 +1916,12 @@ export default function App() {
                           <tbody>
                             {itens.map((r, i) => (
                               <tr key={r.id || i}>
-                                <td>{r.cidade}</td>
-                                <td>{r.led}</td>
-                                <td>{r.anunciante}</td>
-                                <td>{br(r.inicio)}</td>
-                                <td>{br(r.fim)}</td>
-                                <td>
+                                <td data-label="Cidade">{r.cidade}</td>
+                                <td data-label="LED">{r.led}</td>
+                                <td data-label="Anunciante">{r.anunciante}</td>
+                                <td data-label="Início">{br(r.inicio)}</td>
+                                <td data-label="Fim">{br(r.fim)}</td>
+                                <td data-label="Status">
                                   <span
                                     className="status-dot"
                                     style={{ background: corStatus(r.status) }}
@@ -2218,7 +2293,7 @@ export default function App() {
               {resMenu.led} · múltiplos períodos futuros, cada um com seu anunciante; cada um gera
               toast de início próximo. Sem sobreposição com a campanha nem entre reservas.
             </p>
-            <table>
+            <table className={isTablet ? 'table-card' : ''}>
               <thead>
                 <tr>
                   <th>Anunciante</th>
@@ -2230,11 +2305,11 @@ export default function App() {
               <tbody>
                 {resLista.map((r: any) => (
                   <tr key={r.id}>
-                    <td>{r.anunciante}</td>
-                    <td>{br(r.inicio)}</td>
-                    <td>{br(r.fim)}</td>
+                    <td data-label="Anunciante">{r.anunciante}</td>
+                    <td data-label="Início">{br(r.inicio)}</td>
+                    <td data-label="Fim">{br(r.fim)}</td>
                     {podeEditar && (
-                      <td className="row-actions">
+                      <td className="row-actions" data-label="Ações">
                         <button className="danger" onClick={() => excluirReserva(r.id)}>
                           Excluir
                         </button>
@@ -2313,7 +2388,7 @@ export default function App() {
               campanhas e spots juntos.
             </p>
             <div className="table-scroll">
-              <table>
+              <table className={isTablet ? 'table-card' : ''}>
                 <thead>
                   <tr>
                     <th>Código</th>
@@ -2335,12 +2410,10 @@ export default function App() {
                       }))
                   ).map((l: any) => (
                     <tr key={l.codigo}>
-                      <td>
-                        <b>{l.codigo}</b>
-                      </td>
-                      <td>{l.endereco}</td>
-                      <td>{l.cidade_id}</td>
-                      <td>
+                      <td data-label="Código"><b>{l.codigo}</b></td>
+                      <td data-label="Endereço">{l.endereco}</td>
+                      <td data-label="Cidade">{l.cidade_id}</td>
+                      <td data-label="Espaços">
                         <span
                           className="slots"
                           title={`${l.espacos_usados} de ${l.espacos_total} espaços ocupados`}
@@ -2356,7 +2429,7 @@ export default function App() {
                         </span>
                       </td>
                       {podeEditar && (
-                        <td className="row-actions">
+                        <td className="row-actions" data-label="Ações">
                           <button
                             onClick={() => {
                               setLedEditando(l.codigo);

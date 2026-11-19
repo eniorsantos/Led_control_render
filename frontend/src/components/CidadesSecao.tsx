@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { api } from '../api'
 
 interface CidadesSecaoProps {
@@ -27,6 +27,13 @@ export default function CidadesSecao({
     fuso: 'America/Maceio',
   })
   const [cidEditando, setCidEditando] = useState<string | null>(null)
+  const [viewportWidth, setViewportWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024)
+  useEffect(() => {
+    const handleResize = () => setViewportWidth(window.innerWidth)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+  const isTablet = viewportWidth >= 600 && viewportWidth < 980
 
   const salvarCidade = async () => {
     setCidMsg(null)
@@ -76,7 +83,7 @@ export default function CidadesSecao({
         Conforme a tabela cidades: id, nome, UF e fuso. Exclusão só de cidade vazia (sem LEDs).
       </p>
       <div className="table-scroll">
-        <table>
+        <table className={isTablet ? 'table-card' : ''}>
           <thead>
             <tr>
               <th>ID</th>
@@ -89,13 +96,11 @@ export default function CidadesSecao({
           <tbody>
             {cidades.map((c: any) => (
               <tr key={c.id}>
-                <td>
-                  <b>{c.id}</b>
-                </td>
-                <td>{c.nome}</td>
-                <td>{c.uf}</td>
-                <td style={{ fontSize: '.7rem' }}>{c.fuso || ''}</td>
-                <td className="row-actions">
+                <td data-label="ID"><b>{c.id}</b></td>
+                <td data-label="Nome">{c.nome}</td>
+                <td data-label="UF">{c.uf}</td>
+                <td data-label="Fuso" style={{ fontSize: '.7rem' }}>{c.fuso || ''}</td>
+                <td className="row-actions" data-label="Ações">
                   <button
                     onClick={() => {
                       setCidEditando(c.id)
