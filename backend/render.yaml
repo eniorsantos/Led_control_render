@@ -9,17 +9,11 @@ services:
         generateValue: true
       - key: PORT
         value: 3001
-      - key: DB_PATH
-        value: /data/data.db
       - key: SEED
         value: "false"
       - key: HOJE
         value: ""
       - key: DATABASE_URL
-        description: "Opcional: connection string do Supabase/PostgreSQL. Se definido, usa PostgreSQL em vez de SQLite."
-        required: false
-    disk:
-      name: led-data
-      mountPath: /data
-      sizeGB: 1
+        description: "Connection string do Supabase/PostgreSQL (obrigatório em produção). Obtém em Settings > Database > Connection string > URI."
+        required: true
     healthCheckPath: /api/health

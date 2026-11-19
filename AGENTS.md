@@ -15,8 +15,9 @@ cd frontend; npm install; npm run dev   # :5173 (proxy /api → :3001)
 
 ## Estrutura de código
 - `backend/src/index.js` — rotas REST, auth, dashboard, export/import, backup, tema, logo
-- `backend/src/db.js` — schema SQLite + seed + migrações
-- `backend/src/db.supabase.js` — adaptador pg p/ Supabase (não integrado ao index.js ainda)
+- `backend/src/db.unified.js` — **NOVO**: camada unificada SQLite/PostgreSQL (detecta `DATABASE_URL`)
+- `backend/src/db.js` — schema SQLite + seed + migrações (só roda se `!DATABASE_URL`)
+- `backend/src/db.supabase.js` — adaptador pg legado (mantido p/ referência, não usado)
 - `backend/src/regras.js` — regras de negócio (status, ocupação, grade V3, reservas, notificações)
 - `backend/test/smoke.js` — smoke test da spec
 - `frontend/src/App.tsx` — todas as telas (~1560 linhas, monolítico)
@@ -27,14 +28,14 @@ cd frontend; npm install; npm run dev   # :5173 (proxy /api → :3001)
 
 ## Deploy
 - Front-end: Vercel (`frontend/vercel.json`, `VITE_API_URL`)
-- Back-end: Render (`backend/render.yaml`, disco persistente `/data`, `JWT_SECRET`)
-- Banco opcional: Supabase (`supabase/schema.sql`, `DATABASE_URL`, trocar `require('./db')` por `require('./db.supabase')`)
+- Back-end: Render (`backend/render.yaml`, **sem disco persistente**, `DATABASE_URL` obrigatório, `JWT_SECRET`)
+- Banco: Supabase/PostgreSQL (`supabase/schema.sql`, `DATABASE_URL` secret no Render)
 
 ## Pontos de atenção
-1. Senhas em texto plano (`usuarios.senha`) — migrar para bcrypt em produção.
+1. Senhas em texto plano (`usuarios.senha`) — seed usa bcrypt, mas produção deve migrar.
 2. `App.tsx` monolítico — refatorar em componentes menores.
-3. `data.db` está versionado fisicamente (mesmo estando no .gitignore).
-4. `db.supabase.js` existe mas não está conectado ao `index.js`.
+3. `data.db` está no `.gitignore` (não commitado).
+4. ~~`db.supabase.js` existe mas não está conectado ao `index.js`~~ **RESOLVIDO**: `db.unified.js` substitui.
 
 ## Documentação detalhada
 `docs/11-documentacao-detalhada.md` — modelo de dados, regras, API completa, front-end, deploy, variáveis de ambiente, limitações.

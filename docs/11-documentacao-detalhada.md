@@ -20,8 +20,8 @@ SaaS de **Controle de Veiculação em Painéis de LED** que permite gerenciar ca
 |--------|-----------|--------|-------------|
 | Front-end | Vite + React 18 + Recharts 2 | — | TypeScript, SPA, proxy `/api` → `:3001` em dev |
 | Back-end | Node 22 + Express 4 | — | JavaScript puro, sem build step, servidor único |
-| Banco de dados | SQLite via `better-sqlite3` | `^11.3.0` | Relacional, zero-config, arquivo `data.db` |
-| Banco opcional (produção) | Supabase / PostgreSQL | — | Via adaptador `db.supabase.js` + driver `pg` |
+| Banco de dados (dev) | SQLite via `better-sqlite3` | `^11.3.0` | Relacional, zero-config, arquivo `data.db` |
+| Banco (produção) | Supabase / PostgreSQL | — | Via `db.unified.js` + driver `pg` (detecção automática via `DATABASE_URL`) |
 | Autenticação | JWT (jsonwebtoken) | `^9.0.2` | Login/senha, token expira em 12h |
 | CORS | cors | `^2.8.5` | Habilitado globalmente |
 | Exportação XLSX | xlsx | `^0.18.5` | Geração de planilhas Excel |
@@ -658,28 +658,47 @@ Arquivo: `frontend/vercel.json`
 3. Build: `npm run build` → `dist/`.
 4. O `vercel.json` configura build estático com fallback SPA para `/index.html`.
 
-### 13.2 Back-end — Render
+### 13.2 Back-end — Render (PostgreSQL/Supabase — Padrão)
 Arquivo: `backend/render.yaml`
 
 1. Crie um Web Service na Render importando `backend/`.
 2. Build: `npm install`.
 3. Start: `npm start`.
-4. Disco persistente: `led-data` montado em `/data` (armazena `data.db` do SQLite).
+4. **Sem disco persistente** (usa Supabase/PostgreSQL).
 5. Health check: `/api/health`.
 6. Variáveis de ambiente obrigatórias:
-   - `JWT_SECRET` (gere um segredo forte em produção).
-   - `SEED=true` (apenas homolog, para popular dataset demo).
-   - `DATABASE_URL` (se usar Supabase/PostgreSQL).
+   - `DATABASE_URL` — Connection string do Supabase/PostgreSQL (**obrigatório**, marcar como Secret).
+   - `JWT_SECRET` — Gere um segredo forte (Render pode gerar automaticamente).
+   - `SEED=false` — Produção nasce vazia.
+   - `HOJE=""` — Vazio = data real do servidor.
 
-### 13.3 Banco — Supabase (opcional)
+> **Nota:** O deploy com SQLite + disco persistente ainda funciona localmente, mas **não é mais suportado em produção** na Render. Use Supabase/PostgreSQL.
+
+### 13.3 Banco — Supabase (Produção)
 Arquivo: `supabase/schema.sql`
 
 1. Crie projeto no Supabase.
 2. Rode o SQL de `supabase/schema.sql` no editor SQL.
-3. No Render, defina `DATABASE_URL` com a connection string do Supabase (Pooler).
-4. Em `src/index.js`, substitua `require('./db')` por `require('./db.supabase')`.
-5. O adaptador `db.supabase.js` expõe API assíncrona (`pg`) com `query`, `get`, `run`, `prepare`, `transaction`.
-6. Se não quiser migrar, continue com SQLite + disco persistente no Render.
+3. No Supabase: Settings → Database → Connection string → **URI** → copie.
+4. No Render: adicione `DATABASE_URL` (Secret) com a string copiada.
+5. **Nenhuma alteração de código necessária** — `db.unified.js` detecta `DATABASE_URL` automaticamente e usa `pg` (PostgreSQL) em produção, ou `better-sqlite3` (SQLite) em desenvolvimento local.
+
+### 13.4 Desenvolvimento Local (SQLite)
+O projeto roda **100% local** sem configuração extra:
+
+```bash
+cd backend
+npm install
+npm start           # API :3001 (SQLite em ./data.db)
+
+cd ../frontend
+npm install
+npm run dev         # :5173 (proxy /api → :3001)
+```
+
+- `SEED=true` popula dataset demo (inclui `admin/admin123`).
+- `HOJE=2026-10-25` fixa data lógica para testes reproduzíveis.
+- Admin de resgate: se banco não tiver usuários, cria `admin/admin123` automaticamente.
 
 ---
 
@@ -732,10 +751,10 @@ Saída esperada: `SMOKE OK — spec §§1–9 + grade compartilhada/autorizaçã
 
 | Item | Descrição |
 |------|-----------|
-| **Senhas em texto plano** | `usuarios.senha` é armazenada e comparada em texto plano. Para produção, migrar para bcrypt/argon2. |
+| **Senhas em texto plano** | `usuarios.senha` é armazenada e comparada em texto plano. Para produção, migrar para bcrypt/argon2. (Seed já usa `bcrypt.hashSync`). |
 | **App.tsx monolítico** | ~1560 linhas em um único componente. Candidato a refatoração em componentes menores. |
-| **Banco SQLite versionado** | `data.db` está presente no repositório. Deveria estar no `.gitignore` (já está, mas o arquivo existe fisicamente). |
-| **Adaptador Supabase não integrado** | `db.supabase.js` existe, mas `src/index.js` ainda importa `./db` (síncrono). Para usar Supabase, é necessário trocar a importação e adaptar chamadas para estilo assíncrono. |
+| **Banco SQLite versionado** | `data.db` está no `.gitignore` mas pode existir fisicamente se `npm start` rodou localmente. Não commitado. |
+| ~~**Adaptador Supabase não integrado**~~ | **RESOLVIDO:** `db.unified.js` detecta `DATABASE_URL` e usa `pg` (PostgreSQL) ou `better-sqlite3` (SQLite) automaticamente. `db.supabase.js` mantido para referência mas não usado. |
 | **Sem refresh token** | JWT expira em 12h; não há rota de refresh. O usuário precisa logar novamente. |
 | **Sem 2FA / SSO** | Spec menciona futuros, mas não implementado. |
 | **Reservas sem checagem de choque** | Reservas coexistem com campanha e entre si sem validação de sobreposição de datas (por design da spec). |
