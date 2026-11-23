@@ -650,16 +650,87 @@ Variáveis de cor armazenadas na tabela `tema` (JSON). Editáveis via UI na aba 
 
 ## 13. Deploy
 
-### 13.1 Front-end — Vercel
+### 13.1 Deploy Unificado — Render Blueprint (Recomendado)
+Arquivo: `render.yaml` (raiz do projeto)
+
+O blueprint cria **dois serviços linkados** em um único passo:
+
+1. **Backend** → Web Service (Node/Express) — `saas-leds-api`
+2. **Frontend** → Static Site (Vite/React) — `saas-leds-frontend`
+
+#### Como usar:
+1. Push para GitHub (`eniorsantos/Led_control_render`)
+2. No Render Dashboard → **New +** → **Blueprint**
+3. Conecte o repo e clique **Apply**
+4. O Render cria os dois serviços e injeta `VITE_API_URL` no frontend apontando para o backend
+5. No serviço **saas-leds-api** → **Environment** → adicione `DATABASE_URL` (Secret) com a connection string do Supabase
+
+#### Configuração do `render.yaml`:
+```yaml
+services:
+  # Backend: Web Service
+  - type: web
+    name: saas-leds-api
+    env: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: "3001"
+      - key: NODE_ENV
+        value: production
+      - key: SEED
+        value: "false"
+      - key: DATABASE_URL
+        required: true
+
+  # Frontend: Static Site (Vite + React)
+  - type: static
+    name: saas-leds-frontend
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: saas-leds-api
+          property: host
+        transform: "https://${value}/api"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /assets/*
+        name: Cache-Control
+        value: "public, max-age=31536000, immutable"
+```
+
+#### URLs resultantes:
+| Serviço | URL |
+|---------|-----|
+| Backend API | `https://saas-leds-api.onrender.com/api` |
+| Frontend | `https://saas-leds-frontend.onrender.com` |
+
+---
+
+### 13.2 Front-end — Vercel (Alternativo)
 Arquivo: `frontend/vercel.json`
 
 1. Importe a pasta `frontend/` na Vercel.
-2. Defina variável de ambiente: `VITE_API_URL=https://sua-api.onrender.com`.
+2. Defina variável de ambiente: `VITE_API_URL=https://saas-leds-api.onrender.com/api`.
 3. Build: `npm run build` → `dist/`.
 4. O `vercel.json` configura build estático com fallback SPA para `/index.html`.
 
-### 13.2 Back-end — Render (PostgreSQL/Supabase — Padrão)
-Arquivo: `backend/render.yaml`
+---
+
+### 13.3 Back-end — Render (Manual / Web Service apenas)
+Arquivo: `backend/render.yaml` (legado)
 
 1. Crie um Web Service na Render importando `backend/`.
 2. Build: `npm install`.
@@ -670,11 +741,13 @@ Arquivo: `backend/render.yaml`
    - `DATABASE_URL` — Connection string do Supabase/PostgreSQL (**obrigatório**, marcar como Secret).
    - `JWT_SECRET` — Gere um segredo forte (Render pode gerar automaticamente).
    - `SEED=false` — Produção nasce vazia.
-   - `HOJE=""` — Vazio = data real do servidor.
+   - `HOJE` — (opcional) Data fixa para testes; vazio = data real do servidor.
 
 > **Nota:** O deploy com SQLite + disco persistente ainda funciona localmente, mas **não é mais suportado em produção** na Render. Use Supabase/PostgreSQL.
 
-### 13.3 Banco — Supabase (Produção)
+---
+
+### 13.4 Banco — Supabase (Produção)
 Arquivo: `supabase/schema.sql`
 
 1. Crie projeto no Supabase.
@@ -683,7 +756,7 @@ Arquivo: `supabase/schema.sql`
 4. No Render: adicione `DATABASE_URL` (Secret) com a string copiada.
 5. **Nenhuma alteração de código necessária** — `db.unified.js` detecta `DATABASE_URL` automaticamente e usa `pg` (PostgreSQL) em produção, ou `better-sqlite3` (SQLite) em desenvolvimento local.
 
-### 13.4 Desenvolvimento Local (SQLite)
+### 13.5 Desenvolvimento Local (SQLite)
 O projeto roda **100% local** sem configuração extra:
 
 ```bash
