@@ -205,15 +205,7 @@ async function espacosTotalLed(ledCodigo, cfg) {
     ? l.espacos_total
     : cfg.max_clientes_por_led;
 }
-app.get('/api/health/db', async (req, res) => {
-  try {
-    const r = await pool.query('select now() as agora');
-    res.json({ ok: true, agora: r.rows[0].agora });
-  } catch (e) {
-    console.error('DB health error:', e.message);
-    res.status(500).json({ ok: false, error: e.message });
-  }
-});
+
 
 app.post('/api/auth/login', rateLimitLogin, async (req, res) => {
   const { login, senha } = req.body || {};
