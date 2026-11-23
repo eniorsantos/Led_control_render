@@ -145,3 +145,86 @@ CREATE INDEX IF NOT EXISTS idx_notificacoes_dia ON notificacoes(dia);
 -- alter table permissoes enable row level security;
 -- alter table tema enable row level security;
 -- alter table config enable row level security;
+
+-- ============================================================
+-- SEED DE DADOS INICIAIS (execute após criar as tabelas)
+-- ============================================================
+
+-- 1. Config (sempre id=1)
+INSERT INTO config (id, n_inicio_proximo, n_vencimento_proximo, max_clientes_por_led, logo_dataurl)
+VALUES (1, 7, 5, 8, '')
+ON CONFLICT (id) DO NOTHING;
+
+-- 2. Cidades
+INSERT INTO cidades (id, nome, uf, fuso) VALUES
+  ('aracaju', 'Aracaju', 'SE', 'America/Maceio'),
+  ('salvador', 'Salvador', 'BA', 'America/Bahia')
+ON CONFLICT (id) DO NOTHING;
+
+-- 3. LEDs
+INSERT INTO leds (codigo, endereco, cidade_id, espacos_total) VALUES
+  ('AJU 01', 'Silvio Teixeira', 'aracaju', 8),
+  ('AJU 02', 'Tancredo Neves', 'aracaju', 8),
+  ('AJU 03', 'Adélia Franco', 'aracaju', 8),
+  ('AJU 04', 'Francisco Porto', 'aracaju', 8)
+ON CONFLICT (codigo) DO NOTHING;
+
+-- 4. Anunciantes
+INSERT INTO anunciantes (nome) VALUES
+  ('Atakarejo'),
+  ('Vita'),
+  ('Diniz Fonseca'),
+  ('Jardins Delicatessen'),
+  ('Boticário'),
+  ('Hospital dos Olhos'),
+  ('Rede Primavera'),
+  ('São Braz')
+ON CONFLICT (nome) DO NOTHING;
+
+-- 5. Campanhas
+INSERT INTO campanhas (id, cidade_id, led_codigo, anunciante, inicio, fim, reservada) VALUES
+  ('c1', 'aracaju', 'AJU 01', 'Atakarejo', '2026-02-10', '2027-04-09', 0),
+  ('c2', 'aracaju', 'AJU 01', 'Boticário', '2026-11-14', '2026-11-28', 1),
+  ('c3', 'aracaju', 'AJU 02', 'Vita', '2026-08-01', '2026-12-20', 0),
+  ('c4', 'aracaju', 'AJU 02', 'Diniz Fonseca', '2026-06-15', '2026-09-30', 0),
+  ('c5', 'aracaju', 'AJU 03', 'Jardins Delicatessen', '2026-09-01', '2027-01-31', 0),
+  ('c6', 'aracaju', 'AJU 03', 'Hospital dos Olhos', '2026-10-20', '2026-10-31', 0),
+  ('c7', 'aracaju', 'AJU 04', 'São Braz', '2026-07-10', '2026-12-10', 0),
+  ('c8', 'aracaju', 'AJU 04', 'Rede Primavera', '2026-10-27', '2026-11-14', 1)
+ON CONFLICT (id) DO NOTHING;
+
+-- 6. Programações
+INSERT INTO programacoes (id, campanha_id, led_codigo, horario_inicio, duracao_segundos, dias_semana, insercoes_dia) VALUES
+  ('s1', 'c1', 'AJU 01', '07:00', 15, 'SEG', 1),
+  ('s2', 'c3', 'AJU 01', '07:15', 15, 'SEG', 1),
+  ('s3', 'c4', 'AJU 01', '07:30', 10, 'SEG', 1)
+ON CONFLICT (id) DO NOTHING;
+
+-- 7. Usuários (hashes bcrypt corretos para as senhas padrão)
+-- admin123    -> $2b$10$tcfQEfiSYGObDcGh/7SYNeCdgr5iOh1gd11Z5WErWiTUCLiHAnJCG
+-- reg123      -> $2b$10$tuDHxiU5qe8eIqvZLZti.OphlFUX0xQNd5X9qy0TxSW5HJLv1bHSi
+-- op123       -> $2b$10$1liSE3PsmhBFz0C55e6kBOd.KBY63ljs5ksa6zCXphLgAfVYpz.0u
+-- view123     -> $2b$10$reYHgdC98xIlWQTZyueCHupduZ3pt/ICvKfwinDKq4WO0xNLcS0Sy
+INSERT INTO usuarios (login, senha, perfil, nome) VALUES
+  ('admin',    '$2b$10$tcfQEfiSYGObDcGh/7SYNeCdgr5iOh1gd11Z5WErWiTUCLiHAnJCG', 'admin',         'Administrador'),
+  ('regional', '$2b$10$tuDHxiU5qe8eIqvZLZti.OphlFUX0xQNd5X9qy0TxSW5HJLv1bHSi', 'regional',      'Gestor Regional'),
+  ('operador', '$2b$10$1liSE3PsmhBFz0C55e6kBOd.KBY63ljs5ksa6zCXphLgAfVYpz.0u', 'operador',      'Operador'),
+  ('viewer',   '$2b$10$reYHgdC98xIlWQTZyueCHupduZ3pt/ICvKfwinDKq4WO0xNLcS0Sy', 'visualizador', 'Visualizador')
+ON CONFLICT (login) DO UPDATE SET
+  senha = EXCLUDED.senha,
+  perfil = EXCLUDED.perfil,
+  nome = EXCLUDED.nome;
+
+-- 8. Usuário ↔ Cidades (regional só vê Aracaju)
+INSERT INTO usuario_cidade (login, cidade_id) VALUES
+  ('regional', 'aracaju')
+ON CONFLICT (login, cidade_id) DO NOTHING;
+
+-- 9. Reserva exemplo (Jardins - campanha c5)
+INSERT INTO reservas (id, campanha_id, inicio, fim, anunciante, criada_por, criada_em) VALUES
+  ('r1', 'c5', '2027-02-01', '2027-02-28', 'Jardins Delicatessen', 'admin', NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- 10. Tema vazio
+INSERT INTO tema (id, vars) VALUES (1, '{}')
+ON CONFLICT (id) DO NOTHING;
