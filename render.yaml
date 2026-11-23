@@ -18,6 +18,9 @@ services:
     rootDir: backend
     buildCommand: npm install
     startCommand: npm start
+    # Fallback caso rootDir não funcione no Blueprint:
+    # buildCommand: cd backend && npm install
+    # startCommand: cd backend && npm start
     healthCheckPath: /api/health
     envVars:
       - key: JWT_SECRET
