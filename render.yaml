@@ -31,8 +31,6 @@ services:
         value: production
       - key: SEED
         value: "false"
-      - key: HOJE
-        value: ""
       - key: DATABASE_URL
         description: "Connection string do Supabase/PostgreSQL (obrigatório). Obtém em Supabase > Settings > Database > Connection string > URI."
         required: true
