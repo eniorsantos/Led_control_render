@@ -2,68 +2,71 @@
 # Deploy: Backend (Web Service) + Frontend (Static Site)
 #
 # Como usar:
-# 1. Push para GitHub
-# 2. No Render Dashboard → New + → Blueprint
-# 3. Conecte o repo e aplique
-# 4. Defina DATABASE_URL (obrigatório) no backend
-# 5. O VITE_API_URL do frontend aponta automaticamente para o backend
+# 1. Push para GitHub (este arquivo deve ficar na RAIZ do repositório)
+# 2. Render Dashboard → New + → Blueprint → conecte o repo
+# 3. Na primeira sincronização, o Render pedirá o valor de DATABASE_URL (sync: false)
+# 4. Confirme que a URL pública do backend bate com VITE_API_URL / FRONTEND_URL abaixo
 
 services:
   # ─── BACKEND: Node/Express API ───
   - type: web
     name: saas-leds-api
-    env: node
-    region: oregon  # ou frankfurt, singapore, etc.
+    runtime: node            # "env" é legado; o campo atual é "runtime"
+    region: oregon
     plan: free
     rootDir: backend
-    buildCommand: npm install
+    buildCommand: npm ci     # reprodutível (exige package-lock.json); use npm install se não houver lockfile
     startCommand: npm start
-    # Fallback caso rootDir não funcione no Blueprint:
-    # buildCommand: cd backend && npm install
-    # startCommand: cd backend && npm start
     healthCheckPath: /api/health
+    buildFilter:             # em monorepo, só redeploya se o backend mudar
+      paths:
+        - backend/**
     envVars:
-      - key: JWT_SECRET
-        generateValue: true
-      - key: PORT
-        value: "3001"
+      - key: NODE_VERSION
+        value: "20"
       - key: NODE_ENV
         value: production
       - key: SEED
         value: "false"
+      - key: JWT_SECRET
+        generateValue: true
+      # URL do frontend, para configurar CORS no backend (ajuste o nome da variável ao seu código)
+      - key: FRONTEND_URL
+        value: https://saas-leds-frontend.onrender.com
+      # Segredo: o Render pergunta o valor na primeira sincronização.
+      # Supabase > Settings > Database > Connection string > URI
+      # (prefira a string do pooler, ver observações)
       - key: DATABASE_URL
-        description: "Connection string do Supabase/PostgreSQL (obrigatório). Obtém em Supabase > Settings > Database > Connection string > URI."
-        required: true
+        sync: false
+      # PORT removida: o Render injeta PORT (padrão 10000). O app deve usar process.env.PORT.
 
   # ─── FRONTEND: Static Site (Vite + React) ───
   - type: web
-    runtime: static
     name: saas-leds-frontend
-    plan: free
+    runtime: static
+    region: oregon
     rootDir: frontend
     buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
-    pullRequestPreviewsEnabled: true
+    previews:
+      generation: automatic  # substitui o legado pullRequestPreviewsEnabled
+    buildFilter:
+      paths:
+        - frontend/**
     envVars:
+      # fromService/host devolve só o hostname INTERNO (rede privada), inacessível pelo
+      # navegador, e "transform" não existe no spec. Use a URL pública do backend.
       - key: VITE_API_URL
-        # Aponta automaticamente para o backend criado acima
-        # No Render, services se comunicam via hostname interno
-        fromService:
-          type: web
-          name: saas-leds-api
-          property: host
-        transform: "https://${value}/api"
+        value: https://saas-leds-api.onrender.com/api
     routes:
-      # SPA fallback: tudo que não é arquivo → index.html
+      # SPA fallback
       - type: rewrite
         source: /*
         destination: /index.html
     headers:
-      # Cache longo para assets hasheados (Vite gera nomes com hash)
       - path: /assets/*
         name: Cache-Control
         value: "public, max-age=31536000, immutable"
-      # Segurança básica
       - path: /*
         name: X-Content-Type-Options
         value: nosniff
