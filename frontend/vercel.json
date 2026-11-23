@@ -6,8 +6,5 @@
   "routes": [
     { "src": "/api/(.*)", "headers": { "Access-Control-Allow-Origin": "*" }, "continue": true },
     { "src": "/(.*)", "dest": "/index.html" }
-  ],
-  "env": {
-    "VITE_API_URL": "@vercel_api_url"
-  }
+  ]
 }
