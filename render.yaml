@@ -1,0 +1,74 @@
+# Render Blueprint — SaaS Controle de Veiculação LED
+# Deploy: Backend (Web Service) + Frontend (Static Site)
+#
+# Como usar:
+# 1. Push para GitHub
+# 2. No Render Dashboard → New + → Blueprint
+# 3. Conecte o repo e aplique
+# 4. Defina DATABASE_URL (obrigatório) no backend
+# 5. O VITE_API_URL do frontend aponta automaticamente para o backend
+
+services:
+  # ─── BACKEND: Node/Express API ───
+  - type: web
+    name: saas-leds-api
+    env: node
+    region: oregon  # ou frankfurt, singapore, etc.
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: "3001"
+      - key: NODE_ENV
+        value: production
+      - key: SEED
+        value: "false"
+      - key: HOJE
+        value: ""
+      - key: DATABASE_URL
+        description: "Connection string do Supabase/PostgreSQL (obrigatório). Obtém em Supabase > Settings > Database > Connection string > URI."
+        required: true
+
+  # ─── FRONTEND: Static Site (Vite + React) ───
+  - type: static
+    name: saas-leds-frontend
+    region: oregon
+    plan: free
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    pullRequestPreviewsEnabled: true
+    envVars:
+      - key: VITE_API_URL
+        # Aponta automaticamente para o backend criado acima
+        # No Render, services se comunicam via hostname interno
+        fromService:
+          type: web
+          name: saas-leds-api
+          property: host
+        transform: "https://${value}/api"
+    routes:
+      # SPA fallback: tudo que não é arquivo → index.html
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      # Cache longo para assets hasheados (Vite gera nomes com hash)
+      - path: /assets/*
+        name: Cache-Control
+        value: "public, max-age=31536000, immutable"
+      # Segurança básica
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
