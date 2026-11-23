@@ -36,7 +36,8 @@ services:
         required: true
 
   # ─── FRONTEND: Static Site (Vite + React) ───
-  - type: static
+  - type: web
+    runtime: static
     name: saas-leds-frontend
     region: oregon
     plan: free
