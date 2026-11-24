@@ -55,8 +55,9 @@ services:
     envVars:
       # fromService/host devolve só o hostname INTERNO (rede privada), inacessível pelo
       # navegador, e "transform" não existe no spec. Use a URL pública do backend.
+      # SEM /api no final - o código do frontend já faz API + path (ex: /api/auth/login)
       - key: VITE_API_URL
-        value: https://saas-leds-api.onrender.com/api
+        value: https://saas-leds-api.onrender.com
     routes:
       # SPA fallback
       - type: rewrite
