@@ -36,6 +36,8 @@ cd frontend; npm install; npm run dev   # :5173 (proxy /api → :3001)
 - Back-end (manual): Render (`backend/render.yaml`, **sem disco persistente**, `DATABASE_URL` obrigatório, `JWT_SECRET`)
 - Banco: Supabase/PostgreSQL (`supabase/schema.sql`, `DATABASE_URL` secret no Render)
 
+> ⚠️ **Crítico (Supabase + Render):** Use **obrigatoriamente** a connection string do **Session pooler** (porta 5432) ou **Transaction pooler** (porta 6543) — **NÃO a "Direct connection"**. A Direct connection usa IPv6 e falha na Render com `ENETUNREACH`. Pooler = IPv4 ✅.
+
 ## Pontos de atenção
 1. Senhas em texto plano (`usuarios.senha`) — seed usa bcrypt, mas produção deve migrar.
 2. `App.tsx` monolítico — refatorar em componentes menores.

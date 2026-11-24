@@ -777,9 +777,14 @@ Arquivo: `supabase/schema.sql`
 
 1. Crie projeto no Supabase.
 2. Rode o SQL de `supabase/schema.sql` no editor SQL.
-3. No Supabase: Settings → Database → Connection string → **URI** → copie.
-4. No Render: adicione `DATABASE_URL` (Secret) com a string copiada.
+3. **No Supabase: Settings → Database → Connection string → use a "Session pooler" (porta 5432) — NÃO a "Direct connection" (porta 5432 com IPv6).**
+   - **Session pooler** → `aws-0-xxx.pooler.supabase.com:5432` → **IPv4** ✅
+   - **Transaction pooler** → `aws-0-xxx.pooler.supabase.com:6543` → **IPv4** ✅
+   - **Direct connection** → `db.xxx.supabase.co:5432` → **IPv6** ❌ (falha na Render: `ENETUNREACH`)
+4. No Render: adicione `DATABASE_URL` (Secret) com a string do **pooler** copiada.
 5. **Nenhuma alteração de código necessária** — `db.unified.js` detecta `DATABASE_URL` automaticamente e usa `pg` (PostgreSQL) em produção, ou `better-sqlite3` (SQLite) em desenvolvimento local.
+
+> ⚠️ **Crítico:** A Render não tem conectividade IPv6 para o Supabase. Se usar a "Direct connection" (URI padrão), o health check `/api/health/db` falha com `ENETUNREACH 2600:1f13...` e **todas as rotas exceto `/api/health` retornam 502**. Use **obrigatoriamente** o pooler (IPv4).
 
 ---
 
@@ -848,6 +853,19 @@ FROM usuarios WHERE login IN ('admin','regional','operador','viewer');
 | Login maiúsculo (`Admin` vs `admin`) | `login = 'admin'` retorna `false` | `UPDATE usuarios SET login = lower(login)` |
 | Extensão `pgcrypto` não habilitada | `crypt()` erro | `CREATE EXTENSION IF NOT EXISTS pgcrypto;` |
 | Usuário não existe | Tabela vazia | Use o **bootstrap** (Opção A) ou insira via SQL |
+
+#### **Diagnóstico de 502 / ENETUNREACH no Render (Supabase):**
+| Sintoma | Causa | Solução |
+|---------|-------|---------|
+| `/api/health` OK, mas `/api/health/db` → `ENETUNREACH 2600:1f13...` | `DATABASE_URL` usa **Direct connection** (IPv6) | Troque para **Session pooler** (IPv4) no Supabase |
+| Todas as rotas `/api/*` (exceto health) → 502 | Backend não conecta no banco | Corrija `DATABASE_URL` na Render → **Secret** → pooler URI |
+| Deploy "succeeded" mas API não funciona | Build passou, runtime falha no banco | Verifique logs da Render: `connect ENETUNREACH` |
+
+**Como corrigir:**
+1. Supabase → Settings → Database → Connection string → **Session pooler** (porta 5432)
+2. Copie a URI: `postgresql://postgres.[ref]:[senha]@aws-0-[region].pooler.supabase.com:5432/postgres`
+3. Render → saas-leds-api → Environment → `DATABASE_URL` (Secret) → cole a URI
+4. **Manual Deploy** → Deploy latest commit
 
 ---
 
