@@ -39,6 +39,7 @@
 ```
 
 **Fluxo de dados:**
+
 1. Usuário acessa `https://seu-app.vercel.app`
 2. Frontend (React) carrega, faz login via `/api/auth/login`
 3. Backend (Render) valida credenciais, retorna JWT
@@ -50,15 +51,15 @@
 
 ## 2. Pré-requisitos
 
-| Item | Versão Mínima | Verificação |
-|------|---------------|-------------|
-| Git | 2.30+ | `git --version` |
-| Node.js | 20+ (LTS) | `node --version` |
-| npm | 10+ | `npm --version` |
-| Conta GitHub | — | github.com |
-| Conta Vercel | — | vercel.com |
-| Conta Render | — | render.com |
-| Conta Supabase | — | supabase.com |
+| Item           | Versão Mínima | Verificação      |
+| -------------- | ------------- | ---------------- |
+| Git            | 2.30+         | `git --version`  |
+| Node.js        | 20+ (LTS)     | `node --version` |
+| npm            | 10+           | `npm --version`  |
+| Conta GitHub   | —             | github.com       |
+| Conta Vercel   | —             | vercel.com       |
+| Conta Render   | —             | render.com       |
+| Conta Supabase | —             | supabase.com     |
 
 **Contas recomendadas:** Use o mesmo e-mail (ex: GitHub) para todas as plataformas — facilita integração OAuth.
 
@@ -127,29 +128,29 @@ CREATE POLICY "Authenticated users can read" ON campanhas
 
 ### 4.2 Configurar Build & Deploy
 
-| Campo | Valor |
-|-------|-------|
-| **Name** | `saas-leds-api` (ou seu nome) |
-| **Region** | Same as Supabase (ex: `South America (São Paulo)`) |
-| **Branch** | `master` (ou `main`) |
-| **Root Directory** | `backend` |
-| **Runtime** | `Node` |
-| **Build Command** | `npm install` |
-| **Start Command** | `npm start` |
-| **Auto-Deploy** | `Yes` |
+| Campo              | Valor                                              |
+| ------------------ | -------------------------------------------------- |
+| **Name**           | `saas-leds-api` (ou seu nome)                      |
+| **Region**         | Same as Supabase (ex: `South America (São Paulo)`) |
+| **Branch**         | `master` (ou `main`)                               |
+| **Root Directory** | `backend`                                          |
+| **Runtime**        | `Node`                                             |
+| **Build Command**  | `npm install`                                      |
+| **Start Command**  | `npm start`                                        |
+| **Auto-Deploy**    | `Yes`                                              |
 
 ### 4.3 Variáveis de Ambiente (Environment Variables)
 
 Clique **Add Environment Variable** para cada uma:
 
-| Key | Value | Secret? | Descrição |
-|-----|-------|---------|-----------|
-| `DATABASE_URL` | `postgresql://postgres:SUA_SENHA@db.xxx.supabase.co:5432/postgres` | **YES** | Connection string do Supabase (passo 3.3) |
-| `JWT_SECRET` | *(gere um valor forte)* | **YES** | Segredo JWT — Render pode gerar: clique **Generate Value** |
-| `SEED` | `false` | NO | Produção nasce vazia |
-| `HOJE` | *(vazio)* | NO | Data real do servidor |
-| `PORT` | `3001` | NO | Porta interna (Render expõe na 443/80) |
-| `NODE_ENV` | `production` | NO | Habilita SSL no pg driver |
+| Key            | Value                                                              | Secret? | Descrição                                                  |
+| -------------- | ------------------------------------------------------------------ | ------- | ---------------------------------------------------------- |
+| `DATABASE_URL` | `postgresql://postgres:SUA_SENHA@db.xxx.supabase.co:5432/postgres` | **YES** | Connection string do Supabase (passo 3.3)                  |
+| `JWT_SECRET`   | _(gere um valor forte)_                                            | **YES** | Segredo JWT — Render pode gerar: clique **Generate Value** |
+| `SEED`         | `false`                                                            | NO      | Produção nasce vazia                                       |
+| `HOJE`         | _(vazio)_                                                          | NO      | Data real do servidor                                      |
+| `PORT`         | `3001`                                                             | NO      | Porta interna (Render expõe na 443/80)                     |
+| `NODE_ENV`     | `production`                                                       | NO      | Habilita SSL no pg driver                                  |
 
 > ⚠️ **NÃO marque como Secret:** `SEED`, `HOJE`, `PORT`, `NODE_ENV`
 > ✅ **MARQUE como Secret:** `DATABASE_URL`, `JWT_SECRET`
@@ -197,21 +198,21 @@ curl -X POST https://saas-leds-api.onrender.com/api/auth/login \
 
 ### 5.2 Configurar Build
 
-| Campo | Valor |
-|-------|-------|
-| **Project Name** | `saas-leds-frontend` |
-| **Framework Preset** | `Vite` |
-| **Build Command** | `npm run build` |
-| **Output Directory** | `dist` |
-| **Install Command** | `npm install` |
-| **Development Command** | `npm run dev` |
+| Campo                   | Valor                |
+| ----------------------- | -------------------- |
+| **Project Name**        | `saas-leds-frontend` |
+| **Framework Preset**    | `Vite`               |
+| **Build Command**       | `npm run build`      |
+| **Output Directory**    | `dist`               |
+| **Install Command**     | `npm install`        |
+| **Development Command** | `npm run dev`        |
 
 ### 5.3 Variáveis de Ambiente
 
 Clique **Environment Variables** → **Add**:
 
-| Name | Value | Environment |
-|------|-------|-------------|
+| Name           | Value                                | Environment                      |
+| -------------- | ------------------------------------ | -------------------------------- |
 | `VITE_API_URL` | `https://saas-leds-api.onrender.com` | Production, Preview, Development |
 
 > **Importante:** Use a URL **exata** do Render (com `https://`, sem barra final)
@@ -240,15 +241,15 @@ Clique **Environment Variables** → **Add**:
 
 ### 6.1 Checklist de Funcionamento
 
-| Teste | Comando/ação | Esperado |
-|-------|--------------|----------|
-| Frontend carrega | Abrir `https://seu-app.vercel.app` | Tela de login |
-| Health check | `curl https://api.onrender.com/api/health` | `{"ok":true}` |
-| Login admin | UI ou curl POST `/api/auth/login` | JWT token retornado |
-| Dashboard | Login → `/dashboard` | KPIs, gráficos, Gantt |
-| Planilha | Menu → Planilha | ≥ 8 campanhas (se seed) |
-| CORS | Console browser → Network | Sem erros CORS |
-| WebSocket/Realtime | N/A (não usa) | — |
+| Teste              | Comando/ação                               | Esperado                |
+| ------------------ | ------------------------------------------ | ----------------------- |
+| Frontend carrega   | Abrir `https://seu-app.vercel.app`         | Tela de login           |
+| Health check       | `curl https://api.onrender.com/api/health` | `{"ok":true}`           |
+| Login admin        | UI ou curl POST `/api/auth/login`          | JWT token retornado     |
+| Dashboard          | Login → `/dashboard`                       | KPIs, gráficos, Gantt   |
+| Planilha           | Menu → Planilha                            | ≥ 8 campanhas (se seed) |
+| CORS               | Console browser → Network                  | Sem erros CORS          |
+| WebSocket/Realtime | N/A (não usa)                              | —                       |
 
 ### 6.2 Teste de Criação de Dados (Produção)
 
@@ -332,6 +333,7 @@ PORT=3001
 **Causa:** Schema não executou no Supabase
 
 **Solução:**
+
 1. Supabase → SQL Editor → Execute `supabase/schema.sql` novamente
 2. Verifique se tabelas aparecem no **Table Editor**
 
@@ -340,11 +342,13 @@ PORT=3001
 **Sintoma:** `connect ECONNREFUSED` ou timeout
 
 **Causas:**
+
 - `DATABASE_URL` incorreta (senha errada, host errado)
 - Render não consegue acessar IP do Supabase (raro)
 - Supabase paused (free tier pausa após 1 semana inativo)
 
 **Solução:**
+
 1. Verifique `DATABASE_URL` no Render → **Environment** → clique no olho para ver valor
 2. Supabase → Settings → Database → **Connection pooling** → Use **Session Pooler** se persistir
 3. Acesse Supabase dashboard → "Resume project" se pausado
@@ -356,6 +360,7 @@ PORT=3001
 **Causa:** Backend não permite origin do Vercel
 
 **Solução:**
+
 - Backend (`index.js`) já tem `app.use(cors())` — permite todas as origins
 - Se customizou, adicione: `origin: ['https://seu-app.vercel.app', 'http://localhost:5173']`
 
@@ -364,10 +369,12 @@ PORT=3001
 **Sintoma:** Login falha, Network mostra erro
 
 **Causas:**
+
 - `VITE_API_URL` incorreta (sem `https://`, com barra final, typo)
 - Backend down (Render free tier dorme após 15 min inativo)
 
 **Solução:**
+
 1. Verifique `VITE_API_URL` no Vercel → Settings → Environment Variables
 2. Render free tier: primeiro request acorda o serviço (~30s delay)
 3. Teste direto: `curl https://api.onrender.com/api/health`
@@ -377,6 +384,7 @@ PORT=3001
 **Sintoma:** Admin não consegue logar (recebe "credenciais inválidas" mesmo com usuário/senha corretos)
 
 **Causas possíveis:**
+
 1. `SEED=false` → banco vazio → admin não existe
 2. **Hashes bcrypt incompatíveis** — hashes gerados por libs não-Node.js (Python passlib, Go, etc.) não funcionam com `bcrypt.compareSync()` do Node.js
 3. Login com case errado no banco (`Admin` vs `admin`) — Postgres é case-sensitive
@@ -385,6 +393,7 @@ PORT=3001
 **Solução completa — regenerar hashes corretos no Node.js e inserir no Supabase:**
 
 **Passo 1: Gere os hashes no seu terminal local (Node.js):**
+
 ```bash
 node -e "console.log('admin:', require('bcrypt').hashSync('admin123', 10))"
 node -e "console.log('regional:', require('bcrypt').hashSync('reg123', 10))"
@@ -393,13 +402,14 @@ node -e "console.log('viewer:', require('bcrypt').hashSync('view123', 10))"
 ```
 
 **Passo 2: Execute no Supabase SQL Editor (substitua os hashes pelos gerados acima):**
+
 ```sql
 -- Inserir/atualizar usuários com hashes bcrypt compatíveis com Node.js
 INSERT INTO usuarios (login, senha, perfil, nome) VALUES
-  ('admin',    '$2b$10$SEU_HASH_ADMIN_AQUI',    'admin',        'Administrador'),
-  ('regional', '$2b$10$SEU_HASH_REGIONAL_AQUI', 'regional',     'Gestor Regional'),
-  ('operador', '$2b$10$SEU_HASH_OPERADOR_AQUI', 'operador',     'Operador'),
-  ('viewer',   '$2b$10$SEU_HASH_VIEWER_AQUI',   'visualizador', 'Visualizador')
+  ('admin',    '$2b$10$CIRKCo0Ipd4ZceZsNdjgOuqXmVmlltX.sCmrbsEc3F8y7UhI0Tqwq',    'admin',        'Administrador'),
+  ('regional', '$2b$10$xiXn4sE.0NYxziGzeHGsEO3pIHuej8m/LkrpKgW7jIg0lr7zRE6Ay', 'regional',     'Gestor Regional'),
+  ('operador', '$2b$10$jXpYDURIcvl8AwQEFIeUteXC3gdyrngYac/LNe5wX0y0/EooJylUq', 'operador',     'Operador'),
+  ('viewer',   '$2b$10$Pte/A4.EvNf5bO60WQ9hqOGF6Xb/o1JAy1kEKscgHg.N5kKYAHIeS',   'visualizador', 'Visualizador')
 ON CONFLICT (login) DO UPDATE SET
   senha = EXCLUDED.senha,
   perfil = EXCLUDED.perfil,
@@ -411,6 +421,7 @@ ON CONFLICT DO NOTHING;
 ```
 
 **Passo 3: Verifique se funcionou:**
+
 ```sql
 -- Deve retornar TRUE para todas as 4 colunas
 SELECT
@@ -424,6 +435,7 @@ WHERE login IN ('admin','regional','operador','viewer');
 ```
 
 **Diagnóstico rápido se ainda falhar:**
+
 ```sql
 -- 1. Verificar usuários e tipo de hash
 SELECT login, perfil,
@@ -443,22 +455,24 @@ FROM usuarios WHERE lower(login) = 'admin';
 
 **Tabela de causas e soluções:**
 
-| Causa | Sinal | Solução |
-|-------|-------|---------|
-| Hash gerado por outra lib (Python, Go, etc.) | `crypt()` retorna `false` | Regere com `bcrypt.hashSync()` do Node.js |
+| Causa                                         | Sinal                             | Solução                                             |
+| --------------------------------------------- | --------------------------------- | --------------------------------------------------- |
+| Hash gerado por outra lib (Python, Go, etc.)  | `crypt()` retorna `false`         | Regere com `bcrypt.hashSync()` do Node.js           |
 | Login maiúsculo no banco (`Admin` vs `admin`) | `login = 'admin'` retorna `false` | Corrija: `UPDATE usuarios SET login = lower(login)` |
-| Extensão `pgcrypto` não habilitada | `crypt()` erro | `CREATE EXTENSION IF NOT EXISTS pgcrypto;` |
-| Usuário não existe (seed não rodou) | Tabela vazia | Execute o INSERT acima |
+| Extensão `pgcrypto` não habilitada            | `crypt()` erro                    | `CREATE EXTENSION IF NOT EXISTS pgcrypto;`          |
+| Usuário não existe (seed não rodou)           | Tabela vazia                      | Execute o INSERT acima                              |
 
 > **Nota:** O app **USA `bcrypt.compareSync()`** no endpoint de login (`backend/src/index.js`). O problema não é o código — é que hashes gerados fora do ecossistema Node.js (ex: `passlib` do Python) produzem hashes `$2b$` que o Node.js `bcrypt` não consegue verificar. Sempre gere os hashes no mesmo runtime que vai validar (Node.js).
 
 ### 8.6 Build falha no Render/Vercel
 
 **Render:** `npm install` falha
+
 - Verifique `package.json` — `better-sqlite3` precisa de build nativo
 - Render tem Python/gcc? Adicione `BUILD_COMMAND: npm install --ignore-scripts && npm rebuild better-sqlite3`
 
 **Vercel:** `tsc --noEmit` falha
+
 - Verifique erros TypeScript no log
 - Comum: tipos de `api.ts` desatualizados vs backend
 
@@ -493,6 +507,7 @@ ALTER TABLE campanhas ALTER COLUMN nova_coluna SET NOT NULL;
 ```
 
 **Fluxo recomendado:**
+
 1. Teste migração local (`SEED=true` + SQL manual)
 2. Commit + push → Render deploya backend
 3. Execute SQL no Supabase (manual ou via script CI/CD)
@@ -560,15 +575,15 @@ psql "postgresql://postgres:SENHA@db.xxx.supabase.co:5432/postgres" < backup.sql
 
 ## Suporte e Recursos
 
-| Recurso | Link |
-|---------|------|
-| Documentação completa | `docs/11-documentacao-detalhada.md` |
-| Refatoração Render+Supabase | `docs/refactor-render-supabase.md` |
-| AGENTS.md (resumo técnico) | `AGENTS.md` |
-| Issues GitHub | https://github.com/eniorsantos/Led_control_render/issues |
-| Render Docs | https://render.com/docs |
-| Vercel Docs | https://vercel.com/docs |
-| Supabase Docs | https://supabase.com/docs |
+| Recurso                     | Link                                                     |
+| --------------------------- | -------------------------------------------------------- |
+| Documentação completa       | `docs/11-documentacao-detalhada.md`                      |
+| Refatoração Render+Supabase | `docs/refactor-render-supabase.md`                       |
+| AGENTS.md (resumo técnico)  | `AGENTS.md`                                              |
+| Issues GitHub               | https://github.com/eniorsantos/Led_control_render/issues |
+| Render Docs                 | https://render.com/docs                                  |
+| Vercel Docs                 | https://vercel.com/docs                                  |
+| Supabase Docs               | https://supabase.com/docs                                |
 
 ---
 

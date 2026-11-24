@@ -26,9 +26,14 @@ cd frontend; npm install; npm run dev   # :5173 (proxy /api → :3001)
 ## Login demo
 `admin/admin123`, `regional/reg123`, `operador/op123`, `viewer/view123`
 
+## Novos recursos (2026-11)
+- **Bootstrap Admin**: `POST /api/auth/bootstrap-admin` — cria o primeiro admin sem auth (só funciona se não houver admin). Frontend: link "Criar primeiro admin" na tela de login.
+- **Refresh Token**: `POST /api/auth/refresh` — rotação de refresh token (7 dias), renovação automática no frontend.
+
 ## Deploy
-- Front-end: Vercel (`frontend/vercel.json`, `VITE_API_URL`)
-- Back-end: Render (`backend/render.yaml`, **sem disco persistente**, `DATABASE_URL` obrigatório, `JWT_SECRET`)
+- **Recomendado:** Render Blueprint (`render.yaml` na raiz) — cria **Backend (Web Service)** + **Frontend (Static Site)** linkados em um passo. Só precisa definir `DATABASE_URL` no backend após o deploy.
+- Front-end (alternativo): Vercel (`frontend/vercel.json`, `VITE_API_URL`)
+- Back-end (manual): Render (`backend/render.yaml`, **sem disco persistente**, `DATABASE_URL` obrigatório, `JWT_SECRET`)
 - Banco: Supabase/PostgreSQL (`supabase/schema.sql`, `DATABASE_URL` secret no Render)
 
 ## Pontos de atenção
@@ -36,6 +41,7 @@ cd frontend; npm install; npm run dev   # :5173 (proxy /api → :3001)
 2. `App.tsx` monolítico — refatorar em componentes menores.
 3. `data.db` está no `.gitignore` (não commitado).
 4. ~~`db.supabase.js` existe mas não está conectado ao `index.js`~~ **RESOLVIDO**: `db.unified.js` substitui.
+5. ~~Sem refresh token~~ **RESOLVIDO**: implementado `/api/auth/refresh` com rotação.
 
 ## Documentação detalhada
 `docs/11-documentacao-detalhada.md` — modelo de dados, regras, API completa, front-end, deploy, variáveis de ambiente, limitações.

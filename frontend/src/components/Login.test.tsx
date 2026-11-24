@@ -5,12 +5,14 @@ import Login from './Login'
 vi.mock('../api', () => ({
   api: {
     login: vi.fn(),
+    bootstrapAdmin: vi.fn(),
   },
 }))
 
 import { api } from '../api'
 
 const mockLogin = vi.mocked(api.login)
+const mockBootstrap = vi.mocked(api.bootstrapAdmin)
 
 const defaultProps = {
   token: '',
@@ -24,6 +26,9 @@ const defaultProps = {
   setLoginErro: vi.fn(),
   logo: null,
   onLogin: vi.fn(),
+  bootstrap: false,
+  setBootstrap: vi.fn(),
+  onBootstrap: vi.fn(),
 }
 
 beforeEach(() => {
@@ -33,7 +38,10 @@ beforeEach(() => {
   defaultProps.setLogando.mockClear()
   defaultProps.setLoginErro.mockClear()
   defaultProps.onLogin.mockClear()
+  defaultProps.onBootstrap.mockClear()
+  defaultProps.setBootstrap.mockClear()
   mockLogin.mockClear()
+  mockBootstrap.mockClear()
 })
 
 afterEach(() => {

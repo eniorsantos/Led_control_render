@@ -207,6 +207,28 @@ async function espacosTotalLed(ledCodigo, cfg) {
 }
 
 
+// — Bootstrap: criar primeiro admin (sem auth, só funciona se NÃO houver admin) —
+app.post('/api/auth/bootstrap-admin', async (req, res) => {
+  const { login = 'admin', senha, nome = 'Administrador' } = req.body || {};
+  if (!senha || senha.length < 6) {
+    return res.status(400).json({ erro: 'senha obrigatória (mín. 6 caracteres)' });
+  }
+  const adminExiste = await db.prepare("SELECT 1 FROM usuarios WHERE perfil = 'admin' LIMIT 1").get();
+  if (adminExiste) {
+    return res.status(409).json({ erro: 'já existe um admin — use login normal' });
+  }
+  const senhaHash = bcrypt.hashSync(senha, 10);
+  await db.prepare('INSERT INTO usuarios (login,senha,perfil,nome) VALUES (?,?,?,?)')
+    .run(login, senhaHash, 'admin', nome);
+  // Admin tem acesso a todas as cidades por padrão (sem vínculo = todas)
+  await log('system', 'bootstrap.admin', `${login} criado`);
+  const token = jwt.sign({ login, perfil: 'admin', nome }, JWT_SECRET, { expiresIn: '12h' });
+  const refreshToken = jwt.sign({ login, tipo: 'refresh' }, JWT_SECRET, { expiresIn: '7d' });
+  await db.prepare('INSERT OR REPLACE INTO refresh_tokens (token, login, expira_em) VALUES (?, ?, ?)')
+    .run(refreshToken, login, new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString());
+  res.status(201).json({ token, refresh_token: refreshToken, perfil: 'admin', nome, login });
+});
+
 app.post('/api/auth/login', rateLimitLogin, async (req, res) => {
   const { login, senha } = req.body || {};
   if (!login || !senha) return res.status(400).json({ erro: 'login e senha obrigatórios' });

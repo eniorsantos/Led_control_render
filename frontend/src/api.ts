@@ -91,6 +91,11 @@ export interface Me {
 }
 
 export const api = {
+  bootstrapAdmin: (senha: string, login = 'admin', nome = 'Administrador') =>
+    req<{ token: string; refresh_token: string; perfil: string; nome: string; login: string }>(
+      '/api/auth/bootstrap-admin',
+      { method: 'POST', body: JSON.stringify({ login, senha, nome }) },
+    ),
   login: (login: string, senha: string) =>
     req<{ token: string; perfil: string; nome: string }>('/api/auth/login', {
       method: 'POST',

@@ -95,6 +95,7 @@ export default function App() {
   const [token, setToken] = useState(() => localStorage.getItem('led_token') || '');
   const [perfil, setPerfil] = useState(() => localStorage.getItem('led_perfil') || '');
   const [logando, setLogando] = useState(false);
+  const [bootstrapMode, setBootstrapMode] = useState(false);
   const isAdmin = perfil === 'admin';
   const [login, setLogin] = useState('admin');
   const [senha, setSenha] = useState('admin123');
@@ -1024,11 +1025,24 @@ export default function App() {
         loginErro={loginErro}
         setLoginErro={setLoginErro}
         logo={logo}
+        bootstrap={bootstrapMode}
+        setBootstrap={setBootstrapMode}
         onLogin={(r) => {
           localStorage.setItem('led_token', r.token);
           localStorage.setItem('led_perfil', r.perfil);
           setToken(r.token);
           setPerfil(r.perfil);
+          setDismissed([]);
+          carregar();
+          if (localStorage.getItem('led_onboarding') !== '1') setOnboarding(true);
+        }}
+        onBootstrap={(r) => {
+          localStorage.setItem('led_token', r.token);
+          localStorage.setItem('led_perfil', r.perfil);
+          localStorage.setItem('led_refresh_token', r.refresh_token);
+          setToken(r.token);
+          setPerfil(r.perfil);
+          setBootstrapMode(false);
           setDismissed([]);
           carregar();
           if (localStorage.getItem('led_onboarding') !== '1') setOnboarding(true);

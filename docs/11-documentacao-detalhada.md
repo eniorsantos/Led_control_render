@@ -350,6 +350,7 @@ Base: `http://localhost:3001/api` (ou `VITE_API_URL` em produção).
 
 | Método | Endpoint | Descrição | Auth |
 |--------|----------|-----------|------|
+| POST | `/api/auth/bootstrap-admin` | **Cria o primeiro admin** (sem auth, só funciona se não houver admin). Body: `{ login?, senha, nome? }` → retorna JWT + refresh_token | Não |
 | POST | `/api/auth/login` | Autentica login/senha, retorna JWT (12h) | Não |
 | GET | `/api/me` | Retorna perfil, cidades vinculadas e recursos efetivos do usuário logado | Sim |
 
@@ -565,14 +566,38 @@ O seletor de cidade no topbar filula dashboard, planilha, Gantt, LEDs, reservas 
 | `operador` | `op123` | operador |
 | `viewer` | `view123` | visualizador |
 
-### 8.3 Admin de Resgate
-Se o banco for criado sem nenhum usuário, o sistema cria automaticamente `admin/admin123` como administrador de resgate. Isso garante que sempre seja possível fazer login para criar outros usuários.
+### 8.3 Bootstrap do Primeiro Admin (Novo)
+Em produção (Supabase/PostgreSQL), o banco vem vazio. O sistema agora oferece um **fluxo de bootstrap** para criar o primeiro administrador sem login prévio:
 
-### 8.4 JWT
-- Assinado com `JWT_SECRET`.
-- Expira em 12h.
-- Armazenado em `localStorage` (`led_token`, `led_perfil`).
-- Em caso de 401, o front-end remove o token e recarrega com hash `#sessao-expirada`.
+**Backend (`POST /api/auth/bootstrap-admin`):**
+- Funciona **apenas se não existir nenhum usuário com perfil `admin`**
+- Body: `{ login?: "admin", senha: "string (min 6)", nome?: "Administrador" }`
+- Retorna: JWT (12h) + refresh_token (7d) + perfil/nome/login
+- Se já houver admin → retorna 409: "já existe um admin — use login normal"
+
+**Frontend:**
+1. Na tela de login, aparece o link **"Nenhum admin cadastrado? Criar primeiro admin"**
+2. Clicando abre formulário: Login (padrão "admin"), Nome (padrão "Administrador"), Senha (obrigatória, mín. 6 chars)
+3. Ao submeter, cria o admin, faz login automático e redireciona ao painel
+4. Botão "Voltar ao login" cancela e retorna à tela normal
+
+**Exemplo via curl:**
+```bash
+curl -X POST https://api.seudominio.com/api/auth/bootstrap-admin \
+  -H "Content-Type: application/json" \
+  -d '{"senha": "MinhaSenh@123"}'
+```
+
+> ⚠️ **Segurança:** Este endpoint deve ser usado **uma única vez** no primeiro deploy. Após criar o admin, o endpoint fica bloqueado permanentemente (409). Não há como reativá-lo sem limpar a tabela `usuarios`.
+
+### 8.4 Admin de Resgate (Legado - SQLite)
+Se o banco SQLite for criado sem nenhum usuário (modo dev local), o seed automático ainda cria `admin/admin123` como administrador de resgate. Isso garante que sempre seja possível fazer login para criar outros usuários em desenvolvimento.
+
+### 8.5 JWT e Refresh Token
+- **Access Token (JWT)**: assinado com `JWT_SECRET`, expira em 12h. Armazenado em `localStorage` (`led_token`, `led_perfil`).
+- **Refresh Token**: expira em 7 dias, armazenado na tabela `refresh_tokens` (rotação a cada uso). Front-end guarda em `localStorage` (`led_refresh_token`).
+- **Renovação**: `POST /api/auth/refresh` com `{ refresh_token }` → novo access token + novo refresh token (rotação).
+- Em caso de 401 no access token, o front-end tenta refresh automático uma vez; se falhar, remove tokens e recarrega com hash `#sessao-expirada`.
 
 ---
 
@@ -758,15 +783,34 @@ Arquivo: `supabase/schema.sql`
 
 ---
 
-### 13.4.1 **IMPORTANTE: Seed de Usuários no Supabase (Login não funciona sem isso)**
+### 13.4.1 **Criando o Primeiro Admin no Supabase (Novo — Recomendado)**
 
-> ⚠️ **O seed de usuários (`admin/admin123`, `regional/reg123`, etc.) SÓ roda no SQLite local.**
-> No PostgreSQL/Supabase, a tabela `usuarios` fica **vazia** após rodar o `schema.sql`.
-> **Você deve inserir os usuários manualmente no Supabase SQL Editor** para o login funcionar.
+> ✅ **Agora não é mais necessário inserir usuários manualmente via SQL!**
+> O sistema possui um **endpoint de bootstrap** (`POST /api/auth/bootstrap-admin`) que cria o primeiro administrador automaticamente.
 
-#### **Passo a passo para corrigir o login em produção:**
+**Opção A: Via Frontend (Recomendado)**
+1. Após deployar o backend na Render com `DATABASE_URL` configurado, acesse o front-end
+2. Na tela de login, clique em **"Nenhum admin cadastrado? Criar primeiro admin"**
+3. Preencha: Login (padrão `admin`), Nome (padrão `Administrador`), **Senha** (mín. 6 caracteres)
+4. Clique em **"Criar admin e entrar"** → você já entra logado no painel
 
-**1. Gere os hashes bcrypt corretos (no seu terminal local com Node.js):**
+**Opção B: Via curl (API direta)**
+```bash
+curl -X POST https://SEU_BACKEND.onrender.com/api/auth/bootstrap-admin \
+  -H "Content-Type: application/json" \
+  -d '{"senha": "MinhaSenh@Forte123"}'
+```
+Retorna: `{ token, refresh_token, perfil: "admin", nome, login }`
+
+> ⚠️ **Segurança:** Este endpoint só funciona **uma vez** (se não houver admin). Após criar o primeiro admin, ele retorna 409 permanentemente.
+
+---
+
+### 13.4.2 **Método Alternativo: Seed Manual via SQL (Legado)**
+
+Caso prefira inserir os 4 usuários demo de uma vez via SQL Editor do Supabase:
+
+**1. Gere os hashes bcrypt (terminal local com Node.js):**
 ```bash
 node -e "console.log('admin:', require('bcrypt').hashSync('admin123', 10))"
 node -e "console.log('regional:', require('bcrypt').hashSync('reg123', 10))"
@@ -774,9 +818,8 @@ node -e "console.log('operador:', require('bcrypt').hashSync('op123', 10))"
 node -e "console.log('viewer:', require('bcrypt').hashSync('view123', 10))"
 ```
 
-**2. Execute no Supabase SQL Editor (substitua os hashes pelos gerados acima):**
+**2. Execute no Supabase SQL Editor (substitua os hashes pelos gerados):**
 ```sql
--- Inserir usuários com hashes bcrypt compatíveis com Node.js
 INSERT INTO usuarios (login, senha, perfil, nome) VALUES
   ('admin',    '$2b$10$SEU_HASH_ADMIN_AQUI',    'admin',        'Administrador'),
   ('regional', '$2b$10$SEU_HASH_REGIONAL_AQUI', 'regional',     'Gestor Regional'),
@@ -787,49 +830,24 @@ ON CONFLICT (login) DO UPDATE SET
   perfil = EXCLUDED.perfil,
   nome = EXCLUDED.nome;
 
--- Vincular regional à cidade Aracaju (escopo de visibilidade)
 INSERT INTO usuario_cidade (login, cidade_id) VALUES ('regional', 'aracaju')
 ON CONFLICT DO NOTHING;
 ```
 
-**3. Verifique se funcionou:**
+**3. Verifique:**
 ```sql
--- Deve retornar TRUE para todas as 4 colunas
-SELECT
-  login,
-  crypt('admin123', senha) = senha as admin_ok,
-  crypt('reg123', senha) = senha as regional_ok,
-  crypt('op123', senha) = senha as operador_ok,
-  crypt('view123', senha) = senha as viewer_ok
-FROM usuarios
-WHERE login IN ('admin','regional','operador','viewer');
-```
-
-#### **Diagnóstico rápido se login ainda falhar:**
-```sql
--- 1. Verificar usuários e tipo de hash
 SELECT login, perfil,
-       CASE WHEN senha LIKE '$2b$%' THEN 'bcrypt' ELSE 'outro/inválido' END as tipo,
-       left(senha, 30) as preview
-FROM usuarios;
-
--- 2. Testar comparação bcrypt direta (precisa pgcrypto)
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-SELECT login, crypt('admin123', senha) = senha as senha_ok
-FROM usuarios WHERE login = 'admin';
-
--- 3. Verificar case sensitivity (Postgres é case-sensitive!)
-SELECT login, login = 'admin' as exato
-FROM usuarios WHERE lower(login) = 'admin';
+       CASE WHEN senha LIKE '$2b$%' THEN 'bcrypt' ELSE 'outro/inválido' END as tipo
+FROM usuarios WHERE login IN ('admin','regional','operador','viewer');
 ```
 
-#### **Causas comuns de "credenciais inválidas" no Supabase:**
+#### **Diagnóstico de "credenciais inválidas" no Supabase:**
 | Causa | Sinal | Solução |
 |-------|-------|---------|
-| Hash gerado por outra lib (Python, Go, etc.) | `crypt()` retorna `false` | Regere com `bcrypt.hashSync()` do Node.js |
-| Login maiúsculo no banco (`Admin` vs `admin`) | `login = 'admin'` retorna `false` | Corrija para minúsculo: `UPDATE usuarios SET login = lower(login)` |
+| Hash gerado por outra lib (Python, Go) | `crypt()` retorna `false` | Use `bcrypt.hashSync()` do Node.js |
+| Login maiúsculo (`Admin` vs `admin`) | `login = 'admin'` retorna `false` | `UPDATE usuarios SET login = lower(login)` |
 | Extensão `pgcrypto` não habilitada | `crypt()` erro | `CREATE EXTENSION IF NOT EXISTS pgcrypto;` |
-| Usuário não existe (seed não rodou) | Tabela vazia | Execute o INSERT acima |
+| Usuário não existe | Tabela vazia | Use o **bootstrap** (Opção A) ou insira via SQL |
 
 ---
 
@@ -905,7 +923,7 @@ Saída esperada: `SMOKE OK — spec §§1–9 + grade compartilhada/autorizaçã
 | **App.tsx monolítico** | ~1560 linhas em um único componente. Candidato a refatoração em componentes menores. |
 | **Banco SQLite versionado** | `data.db` está no `.gitignore` mas pode existir fisicamente se `npm start` rodou localmente. Não commitado. |
 | ~~**Adaptador Supabase não integrado**~~ | **RESOLVIDO:** `db.unified.js` detecta `DATABASE_URL` e usa `pg` (PostgreSQL) ou `better-sqlite3` (SQLite) automaticamente. `db.supabase.js` mantido para referência mas não usado. |
-| **Sem refresh token** | JWT expira em 12h; não há rota de refresh. O usuário precisa logar novamente. |
+| **Refresh token implementado** | JWT expira em 12h; rota `/api/auth/refresh` com rotação de refresh token (7 dias). |
 | **Sem 2FA / SSO** | Spec menciona futuros, mas não implementado. |
 | **Reservas sem checagem de choque** | Reservas coexistem com campanha e entre si sem validação de sobreposição de datas (por design da spec). |
 | **Cidades sem vínculo = todas** | Usuário não-admin sem cidades vinculadas vê todas as cidades (comportamento atual, pode ser ajustado). |
