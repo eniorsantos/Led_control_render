@@ -211,15 +211,15 @@ INSERT INTO programacoes (id, campanha_id, led_codigo, horario_inicio, duracao_s
 ON CONFLICT (id) DO NOTHING;
 
 -- 7. Usuários (hashes bcrypt corretos para as senhas padrão)
--- admin123    -> $2b$10$tcfQEfiSYGObDcGh/7SYNeCdgr5iOh1gd11Z5WErWiTUCLiHAnJCG
--- reg123      -> $2b$10$tuDHxiU5qe8eIqvZLZti.OphlFUX0xQNd5X9qy0TxSW5HJLv1bHSi
--- op123       -> $2b$10$1liSE3PsmhBFz0C55e6kBOd.KBY63ljs5ksa6zCXphLgAfVYpz.0u
--- view123     -> $2b$10$reYHgdC98xIlWQTZyueCHupduZ3pt/ICvKfwinDKq4WO0xNLcS0Sy
+-- admin123    -> $2b$10$wWPN/swbXIATGeHuTYmQjuGke4NwASj0S4yL0UXAQ76873/3GWpeO
+-- reg123      -> $2b$10$dci/7GSe5bpLp767G1ybJ.H.ssEfePtv4iDIFLYTI3f7FHXVvBKx.
+-- op123       -> $2b$10$XCHo.MrUx60JwGrowEFnpuu4LrC9w6.HSMQZ31Dv16vPs0jdfELIe
+-- view123     -> $2b$10$kRp1kkMjVPnaV1QxG.O0QeamFspXXKfSXbaDvZf50oX28jk81L1vq
 INSERT INTO usuarios (login, senha, perfil, nome) VALUES
-  ('admin',    '$2b$10$tcfQEfiSYGObDcGh/7SYNeCdgr5iOh1gd11Z5WErWiTUCLiHAnJCG', 'admin',         'Administrador'),
-  ('regional', '$2b$10$tuDHxiU5qe8eIqvZLZti.OphlFUX0xQNd5X9qy0TxSW5HJLv1bHSi', 'regional',      'Gestor Regional'),
-  ('operador', '$2b$10$1liSE3PsmhBFz0C55e6kBOd.KBY63ljs5ksa6zCXphLgAfVYpz.0u', 'operador',      'Operador'),
-  ('viewer',   '$2b$10$reYHgdC98xIlWQTZyueCHupduZ3pt/ICvKfwinDKq4WO0xNLcS0Sy', 'visualizador', 'Visualizador')
+  ('admin',    '$2b$10$wWPN/swbXIATGeHuTYmQjuGke4NwASj0S4yL0UXAQ76873/3GWpeO', 'admin',         'Administrador'),
+  ('regional', '$2b$10$dci/7GSe5bpLp767G1ybJ.H.ssEfePtv4iDIFLYTI3f7FHXVvBKx.', 'regional',      'Gestor Regional'),
+  ('operador', '$2b$10$XCHo.MrUx60JwGrowEFnpuu4LrC9w6.HSMQZ31Dv16vPs0jdfELIe', 'operador',      'Operador'),
+  ('viewer',   '$2b$10$kRp1kkMjVPnaV1QxG.O0QeamFspXXKfSXbaDvZf50oX28jk81L1vq', 'visualizador', 'Visualizador')
 ON CONFLICT (login) DO UPDATE SET
   senha = EXCLUDED.senha,
   perfil = EXCLUDED.perfil,
