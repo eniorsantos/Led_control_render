@@ -1937,6 +1937,52 @@ app.get('/api/auditoria', auth(), soAdmin, async (req, res) =>
 
 app.get('/api/health', async (req, res) => res.json({ ok: true, hoje: R.hojeISO() }));
 
+// Debug endpoint para diagnosticar problemas de login (apenas em desenvolvimento)
+if (process.env.NODE_ENV !== 'production') {
+  app.get('/api/debug/usuarios', async (req, res) => {
+    try {
+      const usuarios = await db.prepare('SELECT login, senha, perfil, nome FROM usuarios').all();
+      res.json({
+        database: db.USING_POSTGRES ? 'postgresql' : 'sqlite',
+        total: usuarios.length,
+        usuarios: usuarios.map(u => ({
+          login: u.login,
+          perfil: u.perfil,
+          nome: u.nome,
+          senha_tipo: u.senha.startsWith('$2b$') ? 'bcrypt' : 'plaintext',
+          senha_preview: u.senha.substring(0, 30) + (u.senha.length > 30 ? '...' : ''),
+        })),
+      });
+    } catch (e) {
+      res.status(500).json({ erro: e.message });
+    }
+  });
+}
+
+// Health check do banco de dados
+app.get('/api/health/db', async (req, res) => {
+  try {
+    const start = Date.now();
+    // Testa a conexão com query simples
+    await db.get('SELECT 1 as ok');
+    const latencyMs = Date.now() - start;
+    const isPg = db.USING_POSTGRES === true || (typeof db.isUsingPostgres === 'function' && db.isUsingPostgres());
+    res.json({
+      ok: true,
+      database: isPg ? 'postgresql' : 'sqlite',
+      latency_ms: latencyMs,
+      hoje: R.hojeISO(),
+    });
+  } catch (e) {
+    res.status(503).json({
+      ok: false,
+      database: db.USING_POSTGRES === true ? 'postgresql' : 'sqlite',
+      error: e.message,
+      hoje: R.hojeISO(),
+    });
+  }
+});
+
 // Documentação OpenAPI/Swagger
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 

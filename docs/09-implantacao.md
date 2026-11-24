@@ -307,6 +307,81 @@ Substitui o SQLite local por um banco PostgreSQL gerenciado no Supabase, removen
 
 > O Supabase hospeda apenas o banco; a API Express continua rodando separadamente. O backup continua sendo feito pela tela Configuração (exportação JSON) ou via `pg_dump` do Supabase.
 
+---
+
+### ⚠️ IMPORTANTE: Seed de Usuários no Supabase (Login não funciona sem isso)
+
+> **O seed de usuários (`admin/admin123`, `regional/reg123`, `operador/op123`, `viewer/view123`) SÓ roda no SQLite local (`!DATABASE_URL`).**
+> No PostgreSQL/Supabase, a tabela `usuarios` fica **vazia** após rodar o `schema.sql`.
+> **Você deve inserir os usuários manualmente no Supabase SQL Editor** para o login funcionar.
+
+#### **Passo a passo para corrigir o login em produção:**
+
+**1. Gere os hashes bcrypt corretos (no seu terminal local com Node.js):**
+```bash
+node -e "console.log('admin:', require('bcrypt').hashSync('admin123', 10))"
+node -e "console.log('regional:', require('bcrypt').hashSync('reg123', 10))"
+node -e "console.log('operador:', require('bcrypt').hashSync('op123', 10))"
+node -e "console.log('viewer:', require('bcrypt').hashSync('view123', 10))"
+```
+
+**2. Execute no Supabase SQL Editor (substitua os hashes pelos gerados acima):**
+```sql
+-- Inserir usuários com hashes bcrypt compatíveis com Node.js
+INSERT INTO usuarios (login, senha, perfil, nome) VALUES
+  ('admin',    '$2b$10$SEU_HASH_ADMIN_AQUI',    'admin',        'Administrador'),
+  ('regional', '$2b$10$SEU_HASH_REGIONAL_AQUI', 'regional',     'Gestor Regional'),
+  ('operador', '$2b$10$SEU_HASH_OPERADOR_AQUI', 'operador',     'Operador'),
+  ('viewer',   '$2b$10$SEU_HASH_VIEWER_AQUI',   'visualizador', 'Visualizador')
+ON CONFLICT (login) DO UPDATE SET
+  senha = EXCLUDED.senha,
+  perfil = EXCLUDED.perfil,
+  nome = EXCLUDED.nome;
+
+-- Vincular regional à cidade Aracaju (escopo de visibilidade)
+INSERT INTO usuario_cidade (login, cidade_id) VALUES ('regional', 'aracaju')
+ON CONFLICT DO NOTHING;
+```
+
+**3. Verifique se funcionou:**
+```sql
+-- Deve retornar TRUE para todas as 4 colunas
+SELECT
+  login,
+  crypt('admin123', senha) = senha as admin_ok,
+  crypt('reg123', senha) = senha as regional_ok,
+  crypt('op123', senha) = senha as operador_ok,
+  crypt('view123', senha) = senha as viewer_ok
+FROM usuarios
+WHERE login IN ('admin','regional','operador','viewer');
+```
+
+#### **Diagnóstico rápido se login ainda falhar:**
+```sql
+-- 1. Verificar usuários e tipo de hash
+SELECT login, perfil,
+       CASE WHEN senha LIKE '$2b$%' THEN 'bcrypt' ELSE 'outro/inválido' END as tipo,
+       left(senha, 30) as preview
+FROM usuarios;
+
+-- 2. Testar comparação bcrypt direta (precisa pgcrypto)
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+SELECT login, crypt('admin123', senha) = senha as senha_ok
+FROM usuarios WHERE login = 'admin';
+
+-- 3. Verificar case sensitivity (Postgres é case-sensitive!)
+SELECT login, login = 'admin' as exato
+FROM usuarios WHERE lower(login) = 'admin';
+```
+
+#### **Causas comuns de "credenciais inválidas" no Supabase:**
+| Causa | Sinal | Solução |
+|-------|-------|---------|
+| Hash gerado por outra lib (Python, Go, etc.) | `crypt()` retorna `false` | Regere com `bcrypt.hashSync()` do Node.js |
+| Login maiúsculo no banco (`Admin` vs `admin`) | `login = 'admin'` retorna `false` | Corrija para minúsculo: `UPDATE usuarios SET login = lower(login)` |
+| Extensão `pgcrypto` não habilitada | `crypt()` erro | `CREATE EXTENSION IF NOT EXISTS pgcrypto;` |
+| Usuário não existe (seed não rodou) | Tabela vazia | Execute o INSERT acima |
+
 ## B.4 Endurecimento de produção (checklist)
 
 - [ ] `JWT_SECRET` ≥ 32 bytes, único por ambiente, fora do repo.

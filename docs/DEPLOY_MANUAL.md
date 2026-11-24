@@ -374,18 +374,83 @@ PORT=3001
 
 ### 8.5 Login: "credenciais inválidas" em produção
 
-**Sintoma:** Admin não consegue logar
+**Sintoma:** Admin não consegue logar (recebe "credenciais inválidas" mesmo com usuário/senha corretos)
 
-**Causa:** `SEED=false` → banco vazio → admin não existe
+**Causas possíveis:**
+1. `SEED=false` → banco vazio → admin não existe
+2. **Hashes bcrypt incompatíveis** — hashes gerados por libs não-Node.js (Python passlib, Go, etc.) não funcionam com `bcrypt.compareSync()` do Node.js
+3. Login com case errado no banco (`Admin` vs `admin`) — Postgres é case-sensitive
+4. Extensão `pgcrypto` não habilitada no Supabase
 
-**Solução:**
-```sql
--- No Supabase SQL Editor, execute:
-INSERT INTO usuarios (login, senha, perfil, nome)
-VALUES ('admin', crypt('admin123', gen_salt('bf')), 'admin', 'Administrador');
--- OU use bcrypt hash: '$2b$10$...' (gere com bcrypt.hashSync('admin123', 10))
+**Solução completa — regenerar hashes corretos no Node.js e inserir no Supabase:**
+
+**Passo 1: Gere os hashes no seu terminal local (Node.js):**
+```bash
+node -e "console.log('admin:', require('bcrypt').hashSync('admin123', 10))"
+node -e "console.log('regional:', require('bcrypt').hashSync('reg123', 10))"
+node -e "console.log('operador:', require('bcrypt').hashSync('op123', 10))"
+node -e "console.log('viewer:', require('bcrypt').hashSync('view123', 10))"
 ```
-> O app usa comparação direta (não bcrypt verify em produção atual). Para bcrypt real, altere `index.js` login para usar `bcrypt.compare()`.
+
+**Passo 2: Execute no Supabase SQL Editor (substitua os hashes pelos gerados acima):**
+```sql
+-- Inserir/atualizar usuários com hashes bcrypt compatíveis com Node.js
+INSERT INTO usuarios (login, senha, perfil, nome) VALUES
+  ('admin',    '$2b$10$SEU_HASH_ADMIN_AQUI',    'admin',        'Administrador'),
+  ('regional', '$2b$10$SEU_HASH_REGIONAL_AQUI', 'regional',     'Gestor Regional'),
+  ('operador', '$2b$10$SEU_HASH_OPERADOR_AQUI', 'operador',     'Operador'),
+  ('viewer',   '$2b$10$SEU_HASH_VIEWER_AQUI',   'visualizador', 'Visualizador')
+ON CONFLICT (login) DO UPDATE SET
+  senha = EXCLUDED.senha,
+  perfil = EXCLUDED.perfil,
+  nome = EXCLUDED.nome;
+
+-- Vincular regional à cidade Aracaju (escopo de visibilidade)
+INSERT INTO usuario_cidade (login, cidade_id) VALUES ('regional', 'aracaju')
+ON CONFLICT DO NOTHING;
+```
+
+**Passo 3: Verifique se funcionou:**
+```sql
+-- Deve retornar TRUE para todas as 4 colunas
+SELECT
+  login,
+  crypt('admin123', senha) = senha as admin_ok,
+  crypt('reg123', senha) = senha as regional_ok,
+  crypt('op123', senha) = senha as operador_ok,
+  crypt('view123', senha) = senha as viewer_ok
+FROM usuarios
+WHERE login IN ('admin','regional','operador','viewer');
+```
+
+**Diagnóstico rápido se ainda falhar:**
+```sql
+-- 1. Verificar usuários e tipo de hash
+SELECT login, perfil,
+       CASE WHEN senha LIKE '$2b$%' THEN 'bcrypt' ELSE 'outro/inválido' END as tipo,
+       left(senha, 30) as preview
+FROM usuarios;
+
+-- 2. Testar comparação bcrypt direta (precisa pgcrypto)
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+SELECT login, crypt('admin123', senha) = senha as senha_ok
+FROM usuarios WHERE login = 'admin';
+
+-- 3. Verificar case sensitivity (Postgres é case-sensitive!)
+SELECT login, login = 'admin' as exato
+FROM usuarios WHERE lower(login) = 'admin';
+```
+
+**Tabela de causas e soluções:**
+
+| Causa | Sinal | Solução |
+|-------|-------|---------|
+| Hash gerado por outra lib (Python, Go, etc.) | `crypt()` retorna `false` | Regere com `bcrypt.hashSync()` do Node.js |
+| Login maiúsculo no banco (`Admin` vs `admin`) | `login = 'admin'` retorna `false` | Corrija: `UPDATE usuarios SET login = lower(login)` |
+| Extensão `pgcrypto` não habilitada | `crypt()` erro | `CREATE EXTENSION IF NOT EXISTS pgcrypto;` |
+| Usuário não existe (seed não rodou) | Tabela vazia | Execute o INSERT acima |
+
+> **Nota:** O app **USA `bcrypt.compareSync()`** no endpoint de login (`backend/src/index.js`). O problema não é o código — é que hashes gerados fora do ecossistema Node.js (ex: `passlib` do Python) produzem hashes `$2b$` que o Node.js `bcrypt` não consegue verificar. Sempre gere os hashes no mesmo runtime que vai validar (Node.js).
 
 ### 8.6 Build falha no Render/Vercel
 
