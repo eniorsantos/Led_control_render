@@ -131,6 +131,16 @@ CREATE INDEX IF NOT EXISTS idx_programacoes_led ON programacoes(led_codigo);
 CREATE INDEX IF NOT EXISTS idx_reservas_campanha ON reservas(campanha_id);
 CREATE INDEX IF NOT EXISTS idx_notificacoes_dia ON notificacoes(dia);
 
+-- Refresh tokens (para rotação de JWT)
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  token TEXT PRIMARY KEY,
+  login TEXT NOT NULL REFERENCES usuarios(login) ON DELETE CASCADE,
+  expira_em TIMESTAMP NOT NULL,
+  criada_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_login ON refresh_tokens(login);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expira ON refresh_tokens(expira_em);
+
 -- Row Level Security (opcional — habilitar para controle granular pelo Supabase Auth)
 -- Nota: se habilitar RLS, crie políticas apropriadas para cada tabela
 -- alter table campanhas enable row level security;
