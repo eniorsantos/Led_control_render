@@ -13,7 +13,17 @@ if (USING_POSTGRES) {
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    // Configurações para serverless (Render) + Supabase pooler
+    max: 10,                    // Máximo de conexões no pool
+    idleTimeoutMillis: 30000,   // Fecha conexões ociosas após 30s
+    connectionTimeoutMillis: 5000, // Timeout para nova conexão
+    maxUses: 7500,              // Rotaciona conexão após N usos (evita memory leaks)
+    allowExitOnIdle: true,      // Permite fechar pool se app idle
   });
+  // Log de eventos do pool para debug
+  pool.on('error', (err) => console.error('[PG Pool] erro inesperado:', err.message));
+  pool.on('connect', () => console.log('[PG Pool] nova conexão'));
+  pool.on('remove', () => console.log('[PG Pool] conexão removida'));
 
   // Normaliza placeholders ? → $1, $2... para pg
   // Converte INSERT OR IGNORE → INSERT ... ON CONFLICT DO NOTHING
