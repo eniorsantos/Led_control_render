@@ -1078,8 +1078,10 @@ export default function App() {
       </div>
 
       <div className="wrap">
+        {/* === TOPBAR - 3 LINHAS === */}
         <div className="topbar">
-          <div className="topbar-main">
+          {/* LINHA 1: Brand + Status + KPIs */}
+          <div className="topbar-line topbar-line-1">
             <div className="brand">
               {logo ? (
                 <img className="brand-logo" src={logo} alt="logo" />
@@ -1114,62 +1116,61 @@ export default function App() {
               </div>
             </div>
           </div>
-          <div className="topbar-actions">
-            <div className="select">
-              🏙️ Cidade:{' '}
-              <select value={cidade} onChange={(e) => trocarCidade(e.target.value)}>
-                <option value="">Todas ({cidadesOpts.length})</option>
-                {cidadesOpts.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
-                ))}
-              </select>{' '}
-              ▾
-            </div>
-            <div className="pill">📅 {dash.periodo}</div>
-            {can('leds') && (
-              <button
-                className="pill"
-                style={{ cursor: 'pointer' }}
-                onClick={() => {
-                  setLedsMenu(true);
-                  setLedMsg(null);
-                }}
-              >
-                <span style={{ marginRight: 6 }}>📺</span>Painéis de LED
-              </button>
-            )}
-            {can('reservas') && (
-              <button className="pill" style={{ cursor: 'pointer' }} onClick={abrirReservasMenu}>
-                <span style={{ marginRight: 6 }}>🗓️</span>Reservas
-              </button>
-            )}
-            {tela === 'painel' && temConfig && (
-              <button
-                className="pill"
-                style={{ cursor: 'pointer' }}
-                onClick={() => setTela('config')}
-              >
-                <span style={{ marginRight: 6 }}>⚙️</span>Configuração
-              </button>
-            )}
-            {tela === 'config' && (
-              <button
-                className="pill"
-                style={{ cursor: 'pointer' }}
-                onClick={() => setTela('painel')}
-              >
-                <span style={{ marginRight: 6 }}>←</span>Voltar
-              </button>
-            )}
-            {perfil && (
-              <div className="pill" title="Perfil do usuário (spec §9.2)">
-                <span style={{ marginRight: 6 }}>👤</span>
-                {perfil}
-                {isAdmin ? ' · admin' : ''}
+
+          {/* LINHA 2: Filtros + Ações Principais */}
+          <div className="topbar-line topbar-line-2">
+            <div className="topbar-filters">
+              <div className="select">
+                🏙️ Cidade:{' '}
+                <select value={cidade} onChange={(e) => trocarCidade(e.target.value)}>
+                  <option value="">Todas ({cidadesOpts.length})</option>
+                  {cidadesOpts.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
+                  ))}
+                </select>{' '}
+                ▾
               </div>
-            )}
+              <div className="pill">📅 {dash.periodo}</div>
+            </div>
+            <div className="topbar-primary-actions">
+              {can('leds') && (
+                <button
+                  className="pill"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => {
+                    setLedsMenu(true);
+                    setLedMsg(null);
+                  }}
+                >
+                  <span style={{ marginRight: 6 }}>📺</span>Painéis de LED
+                </button>
+              )}
+              {can('reservas') && (
+                <button className="pill" style={{ cursor: 'pointer' }} onClick={abrirReservasMenu}>
+                  <span style={{ marginRight: 6 }}>🗓️</span>Reservas
+                </button>
+              )}
+              {tela === 'painel' && temConfig && (
+                <button
+                  className="pill"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setTela('config')}
+                >
+                  <span style={{ marginRight: 6 }}>⚙️</span>Configuração
+                </button>
+              )}
+              {tela === 'config' && (
+                <button
+                  className="pill"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setTela('painel')}
+                >
+                  <span style={{ marginRight: 6 }}>←</span>Voltar
+                </button>
+              )}
+            </div>
             <button
               className="topbar-menu-btn"
               aria-label="Menu"
@@ -1179,101 +1180,118 @@ export default function App() {
             >
               ☰
             </button>
-            <div className={`topbar-menu ${mobileMenuOpen ? 'open' : ''}`} id="topbar-menu" role="menu">
-              {can('leds') && (
-                <button
-                  className="pill"
-                  role="menuitem"
-                  onClick={() => { setLedsMenu(true); setLedMsg(null); }}
-                >
-                  <span style={{ marginRight: 6 }}>📺</span>Painéis de LED
-                </button>
+          </div>
+
+          {/* LINHA 3: Perfil + Notificações + Sair */}
+          <div className="topbar-line topbar-line-3">
+            <div className="topbar-user-section">
+              {perfil && (
+                <div className="pill user-pill" title="Perfil do usuário (spec §9.2)">
+                  <span style={{ marginRight: 6 }}>👤</span>
+                  {perfil}
+                  {isAdmin ? ' · admin' : ''}
+                </div>
               )}
-              {can('reservas') && (
-                <button className="pill" role="menuitem" onClick={abrirReservasMenu}>
-                  <span style={{ marginRight: 6 }}>🗓️</span>Reservas
-                </button>
+              {can('notificacoes') && (
+                <div style={{ position: 'relative' }}>
+                  <button
+                    className="bell"
+                    onClick={() => setSino((v) => !v)}
+                    aria-expanded={sino}
+                    aria-haspopup="true"
+                    aria-controls="notificacoes-panel"
+                  >
+                    <span style={{ marginRight: 6 }} aria-hidden="true">
+                      🔔
+                    </span>
+                    <span>Notificações</span>
+                    {pendentes.length > 0 && <span className="count">{pendentes.length}</span>}
+                  </button>
+                  {sino && (
+                    <div
+                      className="notif-panel"
+                      id="notificacoes-panel"
+                      role="menu"
+                      aria-label="Central de notificações"
+                    >
+                      <h3>Central de notificações</h3>
+                      {notifs.length === 0 && <div className="item">Nenhuma notificação.</div>}
+                      {notifs.slice(0, 20).map((n) => (
+                        <div key={n.id} className="item" style={n.lida ? { opacity: 0.55 } : undefined}>
+                          <b>{n.titulo}</b>
+                          <br />
+                          {n.corpo}
+                          {!n.lida && (
+                            <div className="actions">
+                              <button onClick={() => verCampanha(n)}>Ver campanha</button>
+                              <button
+                                onClick={() => {
+                                  if (online && n.id > 0)
+                                    api
+                                      .marcarLida(n.id)
+                                      .then(carregar)
+                                      .catch(() => {});
+                                  setNotifs((xs) =>
+                                    xs.map((x) => (x.id === n.id ? { ...x, lida: true } : x)),
+                                  );
+                                }}
+                              >
+                                Marcar como lida
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
-              {tela === 'painel' && temConfig && (
-                <button
-                  className="pill"
-                  role="menuitem"
-                  onClick={() => setTela('config')}
-                >
-                  <span style={{ marginRight: 6 }}>⚙️</span>Configuração
-                </button>
-              )}
-              {tela === 'config' && (
-                <button
-                  className="pill"
-                  role="menuitem"
-                  onClick={() => setTela('painel')}
-                >
-                  <span style={{ marginRight: 6 }}>←</span>Voltar
-                </button>
-              )}
-              <button className="btn-sair" role="menuitem" onClick={sair} style={{width:'100%',justifyContent:'flex-start'}}>
+            </div>
+            <div className="topbar-exit-section">
+              <button className="btn-sair" onClick={sair}>
                 Sair
               </button>
             </div>
           </div>
-          <div style={{ position: 'relative' }}>
-            {can('notificacoes') && (
+
+          {/* MENU MOBILE (dropdown do botão ☰) */}
+          <div className={`topbar-menu ${mobileMenuOpen ? 'open' : ''}`} id="topbar-menu" role="menu">
+            {can('leds') && (
               <button
-                className="bell"
-                onClick={() => setSino((v) => !v)}
-                aria-expanded={sino}
-                aria-haspopup="true"
-                aria-controls="notificacoes-panel"
+                className="pill"
+                role="menuitem"
+                onClick={() => { setLedsMenu(true); setLedMsg(null); setMobileMenuOpen(false); }}
               >
-                <span style={{ marginRight: 6 }} aria-hidden="true">
-                  🔔
-                </span>
-                <span>Notificações</span>
-                {pendentes.length > 0 && <span className="count">{pendentes.length}</span>}
+                <span style={{ marginRight: 6 }}>📺</span>Painéis de LED
               </button>
             )}
-            {sino && can('notificacoes') && (
-              <div
-                className="notif-panel"
-                id="notificacoes-panel"
-                role="menu"
-                aria-label="Central de notificações"
-              >
-                <h3>Central de notificações</h3>
-                {notifs.length === 0 && <div className="item">Nenhuma notificação.</div>}
-                {notifs.slice(0, 20).map((n) => (
-                  <div key={n.id} className="item" style={n.lida ? { opacity: 0.55 } : undefined}>
-                    <b>{n.titulo}</b>
-                    <br />
-                    {n.corpo}
-                    {!n.lida && (
-                      <div className="actions">
-                        <button onClick={() => verCampanha(n)}>Ver campanha</button>
-                        <button
-                          onClick={() => {
-                            if (online && n.id > 0)
-                              api
-                                .marcarLida(n.id)
-                                .then(carregar)
-                                .catch(() => {});
-                            setNotifs((xs) =>
-                              xs.map((x) => (x.id === n.id ? { ...x, lida: true } : x)),
-                            );
-                          }}
-                        >
-                          Marcar como lida
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+            {can('reservas') && (
+              <button className="pill" role="menuitem" onClick={() => { abrirReservasMenu(); setMobileMenuOpen(false); }}>
+                <span style={{ marginRight: 6 }}>🗓️</span>Reservas
+              </button>
             )}
+            {tela === 'painel' && temConfig && (
+              <button
+                className="pill"
+                role="menuitem"
+                onClick={() => { setTela('config'); setMobileMenuOpen(false); }}
+              >
+                <span style={{ marginRight: 6 }}>⚙️</span>Configuração
+              </button>
+            )}
+            {tela === 'config' && (
+              <button
+                className="pill"
+                role="menuitem"
+                onClick={() => { setTela('painel'); setMobileMenuOpen(false); }}
+              >
+                <span style={{ marginRight: 6 }}>←</span>Voltar
+              </button>
+            )}
+            <button className="btn-sair" role="menuitem" onClick={() => { sair(); setMobileMenuOpen(false); }} style={{width:'100%',justifyContent:'flex-start'}}>
+              Sair
+            </button>
           </div>
-          <button className="btn-sair" onClick={sair}>
-            Sair
-          </button>
         </div>
         <div className="breadcrumb">
           Todas as cidades <span>→</span> <b>{cidadeNome(cidade)}</b>

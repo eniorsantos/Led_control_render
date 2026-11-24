@@ -10,14 +10,36 @@
 body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
 .wrap{max-width:1400px;margin:0 auto;padding:20px}
 
-/* === TOPBAR RESPONSIVA === */
-.topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;
-  background:var(--panel2);border:1px solid var(--border);border-radius:14px;padding:16px 22px;margin-bottom:18px;
+/* === TOPBAR RESPONSIVA - 3 LINHAS === */
+.topbar{display:flex;flex-direction:column;gap:10px;
+  background:var(--panel2);border:1px solid var(--border);border-radius:14px;padding:14px 18px;margin-bottom:18px;
   box-shadow:0 4px 12px rgba(0,0,0,.35)}
-.topbar-main{display:flex;align-items:center;gap:14px;flex-wrap:wrap;flex:1;min-width:0}
-.topbar-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* Linha 1: Brand + Status + KPIs */
+.topbar-line{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+.topbar-line-1{justify-content:space-between;gap:16px}
+.topbar-line-1 .brand{flex-shrink:0}
+.topbar-line-1 .live{flex-shrink:0}
+.topbar-line-1 .kpis{flex:1;display:flex;gap:20px;flex-wrap:wrap;justify-content:flex-end;min-width:0}
+
+/* Linha 2: Filtros + Ações Principais */
+.topbar-line-2{justify-content:space-between;gap:12px}
+.topbar-filters{display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex:1;min-width:0}
+.topbar-primary-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* Linha 3: Perfil + Notificações + Sair */
+.topbar-line-3{justify-content:space-between;gap:12px;align-items:center}
+.topbar-user-section{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.topbar-exit-section{flex-shrink:0}
+
+.user-pill{cursor:default}
+.user-pill:hover{transform:none;background:inherit;border-color:inherit;color:inherit}
+
+/* Botão menu hamburger - visível no mobile */
 .topbar-menu-btn{display:none;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:.85rem;cursor:pointer;color:var(--text)}
 .topbar-menu-btn:hover{border-color:var(--teal);color:var(--teal)}
+
+/* Dropdown mobile */
 .topbar-menu{display:none;position:absolute;top:100%;right:0;background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:12px;z-index:50;box-shadow:0 12px 32px rgba(0,0,0,.5);min-width:200px}
 .topbar-menu.open{display:block}
 .topbar-menu .pill{width:100%;justify-content:flex-start;margin:4px 0}
@@ -151,6 +173,53 @@ tr.destaque td{background:rgba(45,212,191,.14);animation:piscar 1s ease-in-out 3
 }
 @media(max-width:768px){
   .spot-row{grid-template-columns:1fr 1fr}
+}
+
+/* === TOPBAR RESPONSIVE BREAKPOINTS === */
+/* Tablet: 768px - 980px */
+@media(max-width:980px){
+  .topbar-line-1 .kpis{gap:16px}
+  .topbar-line-1 .kpi label{font-size:.6rem}
+  .topbar-line-1 .kpi b{font-size:1rem}
+}
+
+/* Mobile: <= 768px - Mostra hamburger, esconde ações secundárias na linha 2 */
+@media(max-width:768px){
+  .topbar-menu-btn{display:flex;align-items:center;justify-content:center}
+
+  /* Linha 1: KPIs podem quebrar linha */
+  .topbar-line-1{flex-wrap:wrap}
+  .topbar-line-1 .brand{order:1}
+  .topbar-line-1 .live{order:2}
+  .topbar-line-1 .kpis{order:3;width:100%;justify-content:flex-start;margin-top:8px}
+
+  /* Linha 2: Filtros à esquerda, hamburger à direita */
+  .topbar-line-2{position:relative}
+  .topbar-filters{order:1;flex:1}
+  .topbar-primary-actions{order:2;display:none} /* Esconde ações principais no mobile - vão pro menu */
+  .topbar-menu-btn{order:3}
+
+  /* Linha 3: Perfil + Bell + Sair */
+  .topbar-line-3{gap:8px}
+  .topbar-user-section{gap:8px}
+  .user-pill span{display:none} /* Esconde texto do perfil no mobile, só ícone */
+  .user-pill{padding:8px 10px}
+  .bell span{display:none} /* Esconde "Notificações" no mobile */
+  .bell{padding:8px 10px}
+}
+
+/* Mobile pequeno: <= 480px */
+@media(max-width:480px){
+  .topbar{padding:12px 14px}
+  .brand h1{font-size:.95rem}
+  .brand span{font-size:.62rem}
+  .live{font-size:.65rem;padding:3px 10px}
+  .kpi label{font-size:.58rem}
+  .kpi b{font-size:.9rem}
+  .select{padding:6px 10px;font-size:.7rem}
+  .pill{padding:6px 10px;font-size:.7rem}
+  .btn-sair{padding:6px 10px;font-size:.7rem}
+  .topbar-filters{gap:8px}
 }
 .check{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--text);margin:8px 0}
 .check input{width:auto}
