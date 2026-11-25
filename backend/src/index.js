@@ -965,16 +965,17 @@ app.get('/api/dashboard', authOpcional, async (req, res) => {
       .map((c) => c.led_codigo),
   ).size;
   // Disponibilidade = ESPAÇOS livres (total individual ou padrão por LED)
-  const livres = await leds.reduce(async (acc, l) => {
-    const accVal = await acc;
+  let livres = 0;
+  for (const l of leds) {
     const usados = new Set(
       comSt
         .filter((c) => c.led_codigo === l.codigo && c.status !== 'vencida')
         .map((c) => c.anunciante),
     ).size;
-    return accVal + Math.max(0, (await espacosTotalLed(l.codigo, cfg)) - usados);
-  }, 0);
-  const totalEspacos = await leds.reduce(async (acc, l) => acc + (await espacosTotalLed(l.codigo, cfg)), 0);
+    livres += Math.max(0, (await espacosTotalLed(l.codigo, cfg)) - usados);
+  }
+  let totalEspacos = 0;
+  for (const l of leds) totalEspacos += await espacosTotalLed(l.codigo, cfg);
   const tema = temaVars();
   // Rosca de inventário: slots veiculando vs. reservados vs. livres (coerente com o KPI)
   let sV = 0,
