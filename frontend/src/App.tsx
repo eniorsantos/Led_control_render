@@ -1078,42 +1078,110 @@ export default function App() {
       </div>
 
       <div className="wrap">
-        {/* === TOPBAR - 3 LINHAS === */}
+        {/* === TOPBAR - 2 LINHAS === */}
         <div className="topbar">
-          {/* LINHA 1: Brand + Status + KPIs */}
+          {/* LINHA 1: Brand + KPIs (esquerda) | User + Notificações + Sair (direita) */}
           <div className="topbar-line topbar-line-1">
-            <div className="brand">
-              {logo ? (
-                <img className="brand-logo" src={logo} alt="logo" />
-              ) : (
-                <div className="icon">📺</div>
-              )}
-              <div>
-                <h1>CONTROLE DE LED</h1>
-                <span>PAINÉIS DE VEICULAÇÃO</span>
+            <div className="topbar-left">
+              <div className="brand">
+                {logo ? (
+                  <img className="brand-logo" src={logo} alt="logo" />
+                ) : (
+                  <div className="icon">📺</div>
+                )}
+                <div>
+                  <h1>CONTROLE DE LED</h1>
+                  <span>PAINÉIS DE VEICULAÇÃO</span>
+                </div>
+              </div>
+              <span className="live">● LIVE{online ? '' : ' · OFFLINE'}</span>
+              <div className="kpis">
+                <div className="kpi">
+                  <label>OCUPAÇÃO MÉDIA</label>
+                  <b>{dash.kpis.ocupacao_media}%</b>
+                </div>
+                <div className="kpi">
+                  <label>LEDS ATIVOS</label>
+                  <b>{dash.kpis.leds_ativos}</b>
+                </div>
+                <div className="kpi">
+                  <label>A VENCER (7D)</label>
+                  <b style={{ color: 'var(--orange)' }}>{dash.kpis.a_vencer_7d}</b>
+                </div>
+                <div className="kpi">
+                  <label>DISPONÍVEIS</label>
+                  <b style={{ color: 'var(--teal)' }}>
+                    {dash.kpis.livres}
+                    <small>/{dash.kpis.espacos_total} espaços</small>
+                  </b>
+                </div>
               </div>
             </div>
-            <span className="live">● LIVE{online ? '' : ' · OFFLINE'}</span>
-            <div className="kpis">
-              <div className="kpi">
-                <label>OCUPAÇÃO MÉDIA</label>
-                <b>{dash.kpis.ocupacao_media}%</b>
-              </div>
-              <div className="kpi">
-                <label>LEDS ATIVOS</label>
-                <b>{dash.kpis.leds_ativos}</b>
-              </div>
-              <div className="kpi">
-                <label>A VENCER (7D)</label>
-                <b style={{ color: 'var(--orange)' }}>{dash.kpis.a_vencer_7d}</b>
-              </div>
-              <div className="kpi">
-                <label>DISPONÍVEIS</label>
-                <b style={{ color: 'var(--teal)' }}>
-                  {dash.kpis.livres}
-                  <small>/{dash.kpis.espacos_total} espaços</small>
-                </b>
-              </div>
+            <div className="topbar-right">
+              {perfil && (
+                <div className="pill user-pill" title="Perfil do usuário (spec §9.2)">
+                  <span style={{ marginRight: 6 }}>👤</span>
+                  {perfil}
+                  {isAdmin ? ' · admin' : ''}
+                </div>
+              )}
+              {can('notificacoes') && (
+                <div style={{ position: 'relative' }}>
+                  <button
+                    className="bell"
+                    onClick={() => setSino((v) => !v)}
+                    aria-expanded={sino}
+                    aria-haspopup="true"
+                    aria-controls="notificacoes-panel"
+                  >
+                    <span style={{ marginRight: 6 }} aria-hidden="true">
+                      🔔
+                    </span>
+                    <span>Notificações</span>
+                    {pendentes.length > 0 && <span className="count">{pendentes.length}</span>}
+                  </button>
+                  {sino && (
+                    <div
+                      className="notif-panel"
+                      id="notificacoes-panel"
+                      role="menu"
+                      aria-label="Central de notificações"
+                    >
+                      <h3>Central de notificações</h3>
+                      {notifs.length === 0 && <div className="item">Nenhuma notificação.</div>}
+                      {notifs.slice(0, 20).map((n) => (
+                        <div key={n.id} className="item" style={n.lida ? { opacity: 0.55 } : undefined}>
+                          <b>{n.titulo}</b>
+                          <br />
+                          {n.corpo}
+                          {!n.lida && (
+                            <div className="actions">
+                              <button onClick={() => verCampanha(n)}>Ver campanha</button>
+                              <button
+                                onClick={() => {
+                                  if (online && n.id > 0)
+                                    api
+                                      .marcarLida(n.id)
+                                      .then(carregar)
+                                      .catch(() => {});
+                                  setNotifs((xs) =>
+                                    xs.map((x) => (x.id === n.id ? { ...x, lida: true } : x)),
+                                  );
+                                }}
+                              >
+                                Marcar como lida
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <button className="btn-sair" onClick={sair}>
+                Sair
+              </button>
             </div>
           </div>
 
@@ -1182,78 +1250,6 @@ export default function App() {
             </button>
           </div>
 
-          {/* LINHA 3: Perfil + Notificações + Sair */}
-          <div className="topbar-line topbar-line-3">
-            <div className="topbar-user-section">
-              {perfil && (
-                <div className="pill user-pill" title="Perfil do usuário (spec §9.2)">
-                  <span style={{ marginRight: 6 }}>👤</span>
-                  {perfil}
-                  {isAdmin ? ' · admin' : ''}
-                </div>
-              )}
-              {can('notificacoes') && (
-                <div style={{ position: 'relative' }}>
-                  <button
-                    className="bell"
-                    onClick={() => setSino((v) => !v)}
-                    aria-expanded={sino}
-                    aria-haspopup="true"
-                    aria-controls="notificacoes-panel"
-                  >
-                    <span style={{ marginRight: 6 }} aria-hidden="true">
-                      🔔
-                    </span>
-                    <span>Notificações</span>
-                    {pendentes.length > 0 && <span className="count">{pendentes.length}</span>}
-                  </button>
-                  {sino && (
-                    <div
-                      className="notif-panel"
-                      id="notificacoes-panel"
-                      role="menu"
-                      aria-label="Central de notificações"
-                    >
-                      <h3>Central de notificações</h3>
-                      {notifs.length === 0 && <div className="item">Nenhuma notificação.</div>}
-                      {notifs.slice(0, 20).map((n) => (
-                        <div key={n.id} className="item" style={n.lida ? { opacity: 0.55 } : undefined}>
-                          <b>{n.titulo}</b>
-                          <br />
-                          {n.corpo}
-                          {!n.lida && (
-                            <div className="actions">
-                              <button onClick={() => verCampanha(n)}>Ver campanha</button>
-                              <button
-                                onClick={() => {
-                                  if (online && n.id > 0)
-                                    api
-                                      .marcarLida(n.id)
-                                      .then(carregar)
-                                      .catch(() => {});
-                                  setNotifs((xs) =>
-                                    xs.map((x) => (x.id === n.id ? { ...x, lida: true } : x)),
-                                  );
-                                }}
-                              >
-                                Marcar como lida
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="topbar-exit-section">
-              <button className="btn-sair" onClick={sair}>
-                Sair
-              </button>
-            </div>
-          </div>
-
           {/* MENU MOBILE (dropdown do botão ☰) */}
           <div className={`topbar-menu ${mobileMenuOpen ? 'open' : ''}`} id="topbar-menu" role="menu">
             {can('leds') && (
@@ -1285,10 +1281,13 @@ export default function App() {
                 role="menuitem"
                 onClick={() => { setTela('painel'); setMobileMenuOpen(false); }}
               >
-                <span style={{ marginRight: 6 }}>←</span>Voltar
+                <span style={{ marginRight: 6 }}>←</span>Voltar ao painel
               </button>
             )}
-            <button className="btn-sair" role="menuitem" onClick={() => { sair(); setMobileMenuOpen(false); }} style={{width:'100%',justifyContent:'flex-start'}}>
+            <button className="pill" role="menuitem" onClick={() => { setSino(true); setMobileMenuOpen(false); }}>
+              <span style={{ marginRight: 6 }}>🔔</span>Notificações
+            </button>
+            <button className="btn-sair" role="menuitem" onClick={() => { sair(); setMobileMenuOpen(false); }}>
               Sair
             </button>
           </div>
