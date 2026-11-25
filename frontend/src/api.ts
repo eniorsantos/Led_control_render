@@ -20,9 +20,9 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
       location.reload();
     }
   }
-  if (!r.ok)
-    throw new Error(((await r.json().catch(() => ({}))) as any).erro || `HTTP ${r.status}`);
-  return r.json() as Promise<T>;
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error((data as any).erro || `HTTP ${r.status}`);
+  return data as T;
 }
 
 export interface Dashboard {
